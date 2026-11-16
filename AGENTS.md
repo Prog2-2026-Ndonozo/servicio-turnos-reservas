@@ -26,7 +26,8 @@ del contrato, **preguntar o señalar el gap; nunca inventar** campos, estados ni
 ## Stack (no cambiar tecnologías ya propuestas)
 Java 25, Spring Boot 4.1.1, Maven (`./mvnw`), **PostgreSQL propio y exclusivo** (prohibido H2/SQLite/embebidas como
 persistencia principal, E §3; el esqueleto actual trae H2: hay que sacarlo), Flyway, Kafka, springdoc, Lombok, ArchUnit,
-Testcontainers. Comandos: `./mvnw test` · `./mvnw spring-boot:run` · `docker compose up -d`.
+Testcontainers. **El servicio debe poder levantarse con Docker Compose** (Dockerfile + Compose, E §3) y también desde el IDE.
+Comandos: `./mvnw test` · `./mvnw spring-boot:run` · `docker compose up -d`.
 
 ## Alcance
 Hace: registro y login, disponibilidad (horarios del catálogo + ocupaciones de la cátedra), holds, confirmación REST+Kafka,

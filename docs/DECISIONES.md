@@ -18,19 +18,18 @@ Las decisiones heredadas viven como ADR en el repo hermano `../servicio-catalogo
 
 ## Decididas en este servicio
 
-Estado `propuesta` hasta que el alumno las confirme; después, `aceptada`.
+Aceptadas el 2026-11-16, tras la confirmación del alumno.
 
 | Decisión | Resumen | Dónde |
 |---|---|---|
 | PostgreSQL y Flyway | PostgreSQL propio y exclusivo; migraciones SQL planas; Hibernate en `validate`; se saca H2 del esqueleto | `adr/0001-postgresql-y-flyway.md` |
-| Cuatro módulos desde el inicio y reglas entre ellos | `user`, `professional`, `availability`, `reservation` + `config/` técnico; grafo `reservation → availability → professional`, `user` independiente; un módulo solo ve el modelo y los puertos de entrada de otro; `professional` sin persistencia (verificación de E §3 y E §4.2); sin `shared`; carpetas con el primer archivo | `adr/0002-organizacion-en-modulos.md` |
+| Cuatro módulos desde el inicio y reglas entre ellos | `user`, `professional`, `availability`, `reservation` + `config/` técnico; grafo `reservation → availability → professional`, `user` independiente; un módulo solo ve el modelo y los puertos de entrada de otro; reglas de ArchUnit que fijan los pares permitidos y prohíben ciclos; `professional` sin persistencia (cubre la base, no las cachés en memoria: esas se revisan a mano); sin `shared`; carpetas con el primer archivo | `adr/0002-organizacion-en-modulos.md` |
 
 ## Pendientes (decisiones a tomar en este servicio)
 
 | Decisión | Bloquea | Notas |
 |---|---|---|
-| Cómo informa un puerto de entrada «no reservable» o «catálogo caído» entre módulos | T6, T7 | La regla estricta prohíbe usar las excepciones de otro módulo. Inclinación: resultado como tipo de `domain.model` (ADR-0002) |
-| Regla que fije la dirección del grafo de módulos | T1 | La regla genérica no impide `reservation → professional` ni ciclos. Propuesta pendiente de confirmar (ADR-0002) |
+| Cómo informa un puerto de entrada «no reservable» o «catálogo caído» entre módulos | T6, T7 | La regla estricta prohíbe usar las excepciones de otro módulo. Inclinación: resultado como tipo de `domain.model` (ADR-0002). «Catálogo caído» es un fallo de infraestructura: si va como valor del resultado, se traduce a `503` en el borde web |
 | Contrato y validaciones del usuario compatible con JHipster | T2 | E §3.2 dice "respetando las validaciones definidas por la cátedra", que no figuran en E ni en I (I §5.1 trae las de la cuenta técnica). **Gap a confirmar.** Rutas habituales de JHipster: `/api/register` y `/api/authenticate` (supuesto) |
 | JWT del usuario: algoritmo, clave, vigencia y claims | T3 | Solo turnos lo emite y lo valida, así que una clave simétrica es posible. Hash de contraseñas con BCrypt |
 | Qué es el `externalPatientId` | T7 | I §2 pide "un identificador estable del usuario dentro de la aplicación"; propuesta: su ID interno inmutable, nunca el `login` |

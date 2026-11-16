@@ -7,11 +7,23 @@
 - Un issue de GitHub por milestone = una rama = un PR que lo cierra (`Closes #n`).
 - El checklist de cada issue es la guía interna de implementación (capas hexagonales), no son sub-issues.
 - Definición de terminado por issue: checklist resuelto; código en la capa correcta (skill y ArchUnit); al menos un test que
-  cubra el caso de uso; `./mvnw test` en verde; decisiones de diseño con su ADR; documentación al día.
+  cubra el caso de uso; `./mvnw test` en verde; decisiones de diseño con su ADR; documentación al día; y, desde que exista
+  el Compose, `docker compose up --build` sigue levantando el servicio.
 
 ## Punto de partida
-Un esqueleto de Spring Boot de septiembre (`Initial commit`): `Persona`, `HelloTest`, **H2 en el `pom.xml`** y nada más.
-Todo está por construir. Stack: ver `AGENTS.md`.
+**Se parte de cero.** El esqueleto de septiembre (`Initial commit`) no es una base de trabajo: trae una clase y un test de
+ejemplo y una dependencia de H2, que E §3 no admite como persistencia principal. T1 lo reemplaza. Del esqueleto solo se
+aprovecha lo de Maven (parent de Spring Boot 4.1.1, wrapper, plugin de compilación con Lombok). Stack: ver `AGENTS.md`.
+
+## Requisitos transversales
+Valen para todos los issues; un issue no se da por terminado si los rompe.
+- **PostgreSQL propio y exclusivo.** H2, SQLite y otras bases embebidas o en memoria están prohibidas como persistencia
+  principal (E §3). Las pruebas contra base usan Testcontainers.
+- **Dockerizado (E §3):** el servicio y su base se levantan con `docker compose up --build`, y el servicio sigue pudiendo
+  correr desde el IDE. Se asume la lectura estricta del enunciado y se confirma con la cátedra el 17/11 si alcanza con
+  levantar solo las bases (`DECISIONES.md`).
+- **Secretos fuera del repositorio y de la imagen:** `.env`, claves privadas y la cuenta técnica de la cátedra.
+- **Ningún acceso a la base del catálogo ni réplica de su contenido** (E §3, E §4.2).
 
 ## Objetivo para la reunión del 17/11
 En la reunión se muestra el **catálogo funcionando**. De este servicio alcanza con haberlo **empezado** (T1: base en
@@ -25,10 +37,10 @@ JWT técnico) ya no tienen fecha propia: se hacen antes de la entrega, priorizan
 ### T1 chore: base del servicio `[chore]`
 - [ ] Sacar el esqueleto (`Persona`, `HelloTest`) y **H2**; agregar PostgreSQL, Flyway, Lombok, springdoc, ArchUnit, Testcontainers
 - [ ] `docker-compose.yml` con la base propia de este servicio y `.env` / `.env.example` (el `.env` está gitignoreado)
-- [ ] `Dockerfile` de dos etapas (JDK 25 para compilar, JRE 25 para ejecutar) y el servicio en el Compose, sin secretos en la imagen (E §3; lectura a confirmar con la cátedra el 17/11, ver `DECISIONES.md`). No bloquea el hito del 17/11
-- [ ] Estructura hexagonal y reglas de ArchUnit (partir de `ArchitectureRules` del catálogo): adaptar `MODULO_SOLO_TIENE_TRES_CAPAS`, descartar las dos reglas de la cátedra, sumar la regla entre módulos y la de `professional` sin persistencia, cada una con su fixture que viola y otro que respeta (ADR-0002)
+- [ ] `Dockerfile` de dos etapas (JDK 25 para compilar, JRE 25 para ejecutar) y el servicio en el Compose, sin secretos en la imagen (requisito transversal; E §3). No bloquea el hito del 17/11
+- [ ] Estructura hexagonal y reglas de ArchUnit (partir de `ArchitectureRules` del catálogo): adaptar `MODULO_SOLO_TIENE_TRES_CAPAS`, descartar las dos reglas de la cátedra, sumar la regla entre módulos, la de los pares permitidos del grafo, la de ausencia de ciclos (`slices()` sin `config/`) y la de `professional` sin persistencia, cada una con su fixture que viola y otro que respeta (ADR-0002)
 - [ ] Sin carpetas de módulos vacías: nacen con su primer archivo (`user` en T2, `professional` en T4)
-- [x] ADR-0001 (PostgreSQL y Flyway) y ADR-0002 (cuatro módulos y reglas entre ellos): redactados, en estado `propuesta`
+- [x] ADR-0001 (PostgreSQL y Flyway) y ADR-0002 (cuatro módulos y reglas entre ellos): aceptados
 
 ### T2 feat: registro y login del usuario final `[feature]` (E §3.2, E §5.1, E §9)
 - [ ] Modelo de usuario compatible con JHipster: `login`, `password`, `firstName`, `lastName`, `email`, `imageUrl`, `langKey`

@@ -1,7 +1,7 @@
 # ADR-0002: Cuatro módulos desde el inicio y reglas de dependencia entre ellos
 
 Fecha: 2026-11-15
-Estado: propuesta
+Estado: aceptada
 
 ## Contexto
 Hay que decidir cómo se organiza el código de este servicio antes de escribir el primero. La skill `hexagonal-catalogo`
@@ -75,19 +75,25 @@ reservation   ->  availability   (puerto de entrada; p. ej. validar que un horar
 | `DOMINIO_ES_PURO`, `APLICACION_NO_CONOCE_INFRAESTRUCTURA`, `WEB_NO_VE_PERSISTENCIA_NI_PUERTOS_DE_SALIDA`, `PUERTOS_DE_ENTRADA_SOLO_SE_IMPLEMENTAN_EN_APLICACION`, `SERVICE_SOLO_EN_LAS_FACHADAS`, `SIN_INYECCION_POR_CAMPO` | Se heredan del catálogo sin cambios: sus patrones son por capa (`..domain..`) y ya valen para cada módulo |
 | Las dos reglas de la cátedra del catálogo | **No se heredan**: son de la sincronización. Reaparecen adaptadas cuando existan los adaptadores de la cátedra (T6 y T7) |
 | **Nueva:** un módulo no depende de la infraestructura de otro | Un módulo solo puede depender de `<otro>.domain.model` y `<otro>.domain.ports.in`. Los módulos se detectan por el nombre del paquete. **Estricta desde el inicio**: la fachada, la infraestructura y las excepciones de otro módulo quedan prohibidas |
+| **Nueva:** el grafo de módulos es el declarado | Pares **permitidos**: `availability → professional` y `reservation → availability`. Cualquier otra dependencia entre módulos es una violación (`user` y `professional` no dependen de nadie; `reservation` no depende de `professional` ni de `user`). Al listar lo permitido y no lo prohibido, un módulo nuevo nace sin dependencias hasta que se lo declare |
+| **Nueva:** los módulos no forman ciclos | `slices()` de ArchUnit con `beFreeOfCycles()`, aplicada solo a los cuatro módulos: un `SliceAssignment` ignora `config/` y la clase raíz, que dependen de todos y darían falsos positivos. Con el grafo anterior es redundante hoy; sigue protegiendo si alguien agrega un par permitido sin pensar en el ciclo |
 | **Nueva:** `professional` no usa persistencia | Ninguna clase de `professional` puede depender de `jakarta.persistence`, de Spring Data ni de las otras vías de acceso a base (`org.hibernate`, `org.springframework.jdbc`, `org.springframework.orm`, `java.sql`, `javax.sql`) |
 
 Cada regla nueva lleva dos fixtures: uno que la viola y otro que la respeta, para comprobar que detecta lo que protege y que
-no bloquea de más (`docs/FLUJO-DE-TRABAJO.md`, «Revisar la mutación»). La regla entre módulos recibe el paquete base como
+no bloquea de más (`docs/FLUJO-DE-TRABAJO.md`, «Revisar la mutación»). Las reglas entre módulos reciben el paquete base como
 parámetro para poder probarse con fixtures.
 
 ### Forma de verificar la prohibición de duplicar el catálogo
-La regla `professional` no usa persistencia es **la forma verificable** de E §3 y E §4.2: sin acceso a base, ese módulo no
-puede almacenar el catálogo, ni como réplica ni como caché. Alcance y límites:
-- Cubre el código del módulo. **No** detecta una migración de Flyway que cree una tabla de profesionales: las migraciones se
-  revisan a mano.
-- La lista ampliada (`hibernate`, `jdbc`, `orm`, `java.sql`, `javax.sql`) va más allá de lo pedido (`jakarta.persistence` y
-  Spring Data): sin ella, un `JdbcTemplate` esquivaría la regla. Se puede acotar si se prefiere.
+La regla `professional` no usa persistencia es **la forma verificable** de la parte de E §3 y E §4.2 que prohíbe guardar el
+catálogo en la base: sin acceso a base, ese módulo no puede persistirlo. Alcance y límites, dichos con exactitud:
+- **Cubre la persistencia, no la memoria.** Una caché en memoria (un `Map`, una caché de Spring) no usa ninguna de esas
+  clases: pasaría la regla y violaría igual el espíritu de E §3. Que ningún módulo que consuma el catálogo (`professional`
+  y `availability`) lo retenga como vigente se **revisa a mano** en cada PR. No se agrega otra regla porque no hay una
+  forma fiable de detectar un `Map`; si más adelante se quiere una barrera parcial, se pueden prohibir `org.springframework.cache..`
+  y las librerías de caché.
+- **No** detecta una migración de Flyway que cree una tabla de profesionales: las migraciones también se revisan a mano.
+- La lista ampliada (`hibernate`, `jdbc`, `orm`, `java.sql`, `javax.sql`) va más allá de `jakarta.persistence` y Spring
+  Data: sin ella, un `JdbcTemplate` esquivaría la regla.
 - Los datos descriptivos históricos del profesional que E §4.2 permite conservar viven en `reservation`, no en `professional`.
 
 ## Justificación
@@ -113,10 +119,10 @@ Se registran sin decidir que sean correctos; se revisan si surgen problemas.
 - **Pendiente para T6 y T7:** cómo informa un puerto de entrada que el horario no es reservable o que el catálogo no responde
   (E §8). La regla estricta prohíbe usar las excepciones de otro módulo. Inclinación: que el puerto devuelva un resultado
   como tipo de `domain.model` (la skill prefiere resultado a excepción), en lugar de abrir la regla. Se decide con su ADR.
-- **No verificado por regla:** la dirección del grafo. La regla genérica permite a cualquier módulo depender del modelo y de
-  los puertos de entrada de otro, así que nada impide hoy que `reservation` dependa de `professional` o que dos módulos se
-  referencien mutuamente. Se propone, sin haberlo decidido, una regla que liste los pares permitidos. Pendiente de
-  confirmar.
+  A vigilar: «catálogo caído» es un fallo de infraestructura; si se modela como un valor más del resultado, hay que
+  traducirlo a un `503` en el borde web y no mezclarlo con «horario no reservable».
+- **Cambiar el grafo es una decisión con ADR:** agregar un par permitido (por ejemplo, `reservation → professional` para
+  guardar datos históricos del profesional) exige editar la regla y justificarlo.
 - Cada módulo con consultas al catálogo o a la cátedra necesita su propia fachada y puertos, incluso cuando solo reenvía
   (`professional` en T5). Se acepta ese costo.
 - Si se cambia el nombre de un módulo, se cambia el nombre del paquete: las reglas no listan módulos, no hace falta tocarlas.

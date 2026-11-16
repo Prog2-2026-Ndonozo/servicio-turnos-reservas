@@ -1,7 +1,7 @@
 # ADR-0001: PostgreSQL como base de datos y Flyway para las migraciones
 
 Fecha: 2026-11-15
-Estado: propuesta
+Estado: aceptada
 
 ## Contexto
 E §3 exige que cada servicio sea dueño exclusivo de sus datos y administre sus propias migraciones, y que la persistencia
