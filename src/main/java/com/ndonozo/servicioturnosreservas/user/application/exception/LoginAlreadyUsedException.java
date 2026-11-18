@@ -1,7 +1,7 @@
 package com.ndonozo.servicioturnosreservas.user.application.exception;
 
-public class LoginAlreadyUseException extends RuntimeException {
-  public LoginAlreadyUseException(String message) {
+public class LoginAlreadyUsedException extends RuntimeException {
+  public LoginAlreadyUsedException(String message) {
     super(message);
   }
 }

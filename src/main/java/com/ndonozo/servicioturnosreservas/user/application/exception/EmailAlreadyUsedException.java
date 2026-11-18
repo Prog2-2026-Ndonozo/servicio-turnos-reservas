@@ -1,7 +1,7 @@
 package com.ndonozo.servicioturnosreservas.user.application.exception;
 
 public class EmailAlreadyUsedException extends RuntimeException {
-  public EmailAlreadyUsedException(String message) {
-    super(message);
-  }
+    public EmailAlreadyUsedException(String message) {
+        super(message);
+    }
 }
