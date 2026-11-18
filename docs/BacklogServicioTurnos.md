@@ -35,11 +35,11 @@ JWT técnico) ya no tienen fecha propia: se hacen antes de la entrega, priorizan
 ## Milestone 1 — Base del servicio y usuarios
 
 ### T1 chore: base del servicio `[chore]`
-- [ ] Sacar el esqueleto (`Persona`, `HelloTest`) y **H2**; agregar PostgreSQL, Flyway, Lombok, springdoc, ArchUnit, Testcontainers
-- [ ] `docker-compose.yml` con la base propia de este servicio y `.env` / `.env.example` (el `.env` está gitignoreado)
-- [ ] `Dockerfile` de dos etapas (JDK 25 para compilar, JRE 25 para ejecutar) y el servicio en el Compose, sin secretos en la imagen (requisito transversal; E §3). No bloquea el hito del 17/11
-- [ ] Estructura hexagonal y reglas de ArchUnit (partir de `ArchitectureRules` del catálogo): adaptar `MODULO_SOLO_TIENE_TRES_CAPAS`, descartar las dos reglas de la cátedra, sumar la regla entre módulos, la de los pares permitidos del grafo, la de ausencia de ciclos (`slices()` sin `config/`) y la de `professional` sin persistencia, cada una con su fixture que viola y otro que respeta (ADR-0002)
-- [ ] Sin carpetas de módulos vacías: nacen con su primer archivo (`user` en T2, `professional` en T4)
+- [x] Sacar el esqueleto (`Persona`, `HelloTest`) y **H2**; agregar PostgreSQL, Flyway, Lombok, springdoc, ArchUnit, Testcontainers
+- [x] `docker-compose.yml` con la base propia de este servicio y `.env` / `.env.example` (el `.env` está gitignoreado)
+- [x] `Dockerfile` de dos etapas (JDK 25 para compilar, JRE 25 para ejecutar) y el servicio en el Compose, sin secretos en la imagen (requisito transversal; E §3). No bloquea el hito del 17/11
+- [x] Estructura hexagonal y reglas de ArchUnit (partir de `ArchitectureRules` del catálogo): adaptar `MODULO_SOLO_TIENE_TRES_CAPAS`, descartar las dos reglas de la cátedra, sumar la regla entre módulos, la de los pares permitidos del grafo, la de ausencia de ciclos (`slices()` sin `config/`) y la de `professional` sin persistencia, cada una con su fixture que viola y otro que respeta (ADR-0002)
+- [x] Sin carpetas de módulos vacías: nacen con su primer archivo (`user` en T2, `professional` en T4)
 - [x] ADR-0001 (PostgreSQL y Flyway) y ADR-0002 (cuatro módulos y reglas entre ellos): aceptados
 
 ### T2 feat: registro y login del usuario final `[feature]` (E §3.2, E §5.1, E §9)
