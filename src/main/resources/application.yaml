@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: servicio-turnos-reservas
+
+  config:
+    import: optional:file:.env[.properties]   # carga el .env local; una variable de entorno real tiene prioridad
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:turnos}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
