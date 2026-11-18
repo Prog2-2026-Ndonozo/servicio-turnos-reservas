@@ -17,5 +17,21 @@ services:
       retries: 5
     restart: unless-stopped
 
+  app:
+    build: .
+    container_name: turnos_app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-turnos}
+      DB_USERNAME: "${DB_USERNAME:?Falta DB_USERNAME en el .env (copiá .env.example)}"
+      DB_PASSWORD: "${DB_PASSWORD:?Falta DB_PASSWORD en el .env (copiá .env.example)}"
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    restart: unless-stopped
+
 volumes:
   postgres_data:
