@@ -1,4 +1,4 @@
-package com.ndonozo.servicioturnosreservas.user.infraestructure.persistence.entity;
+package com.ndonozo.servicioturnosreservas.user.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import lombok.Generated;
@@ -34,7 +34,7 @@ public class UserEntity {
     @Column(name = "authority")
     private Set<String> authorities = new HashSet<>();
 
-    private Instant createDate;
+    private Instant createdDate;
     private Instant lastModifiedDate;
 }
 
