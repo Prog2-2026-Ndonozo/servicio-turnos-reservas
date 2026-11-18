@@ -1,4 +1,4 @@
-package com.ndonozo.servicioturnosreservas.User.domain.model;
+package com.ndonozo.servicioturnosreservas.user.domain.model;
 
 public record RegisterUserCommand(
         String login,

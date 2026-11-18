@@ -1,4 +1,4 @@
-package com.ndonozo.servicioturnosreservas.User.domain.model;
+package com.ndonozo.servicioturnosreservas.user.domain.model;
 
 public sealed interface RegistrationResult {
     record Registered(User user) implements RegistrationResult {}
