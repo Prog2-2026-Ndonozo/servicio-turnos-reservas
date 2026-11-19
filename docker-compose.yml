@@ -29,6 +29,7 @@ services:
       DB_NAME: ${DB_NAME:-turnos}
       DB_USERNAME: "${DB_USERNAME:?Falta DB_USERNAME en el .env (copiá .env.example)}"
       DB_PASSWORD: "${DB_PASSWORD:?Falta DB_PASSWORD en el .env (copiá .env.example)}"
+      JWT_SECRET: "${JWT_SECRET:?Falta JWT_SECRET en el .env (copiá .env.example)}"
     ports:
       - "${APP_PORT:-8080}:8080"
     restart: unless-stopped

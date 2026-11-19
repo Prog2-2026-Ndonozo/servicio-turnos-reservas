@@ -18,3 +18,9 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      expiration: 24h
