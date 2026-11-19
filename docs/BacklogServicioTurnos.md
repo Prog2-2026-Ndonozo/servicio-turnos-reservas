@@ -43,10 +43,10 @@ JWT técnico) ya no tienen fecha propia: se hacen antes de la entrega, priorizan
 - [x] ADR-0001 (PostgreSQL y Flyway) y ADR-0002 (cuatro módulos y reglas entre ellos): aceptados
 
 ### T2 feat: registro y login del usuario final `[feature]` (E §3.2, E §5.1, E §9)
-- [ ] Modelo de usuario compatible con JHipster: `login`, `password`, `firstName`, `lastName`, `email`, `imageUrl`, `langKey`
-- [ ] Registro: queda activo sin verificar el correo; identificadores, estado y autoridades los administra el backend
-- [ ] Contraseña con hash adecuado (nunca en texto plano, ni en respuestas ni en logs)
-- [ ] Login que devuelve un JWT; ADR del contrato (rutas y validaciones: ver gap en `DECISIONES.md`)
+- [x] Modelo de usuario compatible con JHipster: `login`, `password`, `firstName`, `lastName`, `email`, `imageUrl`, `langKey`
+- [x] Registro: queda activo sin verificar el correo; identificadores, estado y autoridades los administra el backend
+- [x] Contraseña con hash adecuado (nunca en texto plano, ni en respuestas ni en logs)
+- [x] Login que devuelve un JWT; ADR del contrato (rutas y validaciones: ver gap en `DECISIONES.md`)
 
 ### T3 feat: seguridad con JWT de usuario `[security]` (E §9)
 - [ ] Servidor de recursos: validar firma y vigencia del JWT del usuario en los endpoints protegidos
