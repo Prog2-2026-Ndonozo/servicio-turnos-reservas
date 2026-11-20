@@ -1,5 +1,6 @@
 package com.ndonozo.servicioturnosreservas.user.infrastructure.web;
 
+import com.ndonozo.servicioturnosreservas.config.ProblemJsonSecurityHandlers;
 import com.ndonozo.servicioturnosreservas.config.SecurityConfig;
 import com.ndonozo.servicioturnosreservas.user.application.exception.EmailAlreadyUsedException;
 import com.ndonozo.servicioturnosreservas.user.application.exception.InvalidCredentialsException;
@@ -19,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -35,7 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(UserController.class)
-@Import({SecurityConfig.class, UserDtoMapper.class, ApiExceptionHandler.class})
+@Import({SecurityConfig.class, ProblemJsonSecurityHandlers.class, UserDtoMapper.class, ApiExceptionHandler.class})
+@TestPropertySource(properties = "app.security.jwt.secret=BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw==")
 class UserControllerTest {
 
     private static final String REGISTRO_VALIDO = """
@@ -229,9 +232,8 @@ class UserControllerTest {
 
     @Test
     void cualquier_otra_ruta_exige_autenticacion() throws Exception {
-        // T3 reemplaza esto por 401 en problem+json cuando se agregue el servidor de recursos.
-        mockMvc.perform(get("/api/lo-que-sea")).andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/register")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/lo-que-sea")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/register")).andExpect(status().isUnauthorized());
     }
 
     // ---------- que la contraseña no se filtre ----------

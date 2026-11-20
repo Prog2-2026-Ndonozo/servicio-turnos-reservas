@@ -134,6 +134,34 @@ class UserApiIntegrationTest {
         assertThat(cuerpo).doesNotContain("clave1234").doesNotContain("$2");
     }
 
+    // ---------- T3: el token que emite el login es el que la seguridad acepta ----------
+
+    @Test
+    void el_token_del_login_pasa_la_seguridad_y_sin_token_no() throws Exception {
+        registrar("ines", "ines@correo.com", "clave1234").andExpect(status().isCreated());
+        String token = com.jayway.jsonpath.JsonPath.read(
+                autenticar("ines", "clave1234").andReturn().getResponse().getContentAsString(), "$.id_token");
+
+        // No hay ningún endpoint protegido real todavía: 404 significa que la seguridad lo dejó pasar.
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/no-existe")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/no-existe"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
+    @Test
+    void un_token_de_login_alterado_no_pasa_la_seguridad() throws Exception {
+        registrar("jaime", "jaime@correo.com", "clave1234").andExpect(status().isCreated());
+        String token = com.jayway.jsonpath.JsonPath.read(
+                autenticar("jaime", "clave1234").andReturn().getResponse().getContentAsString(), "$.id_token");
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/no-existe")
+                        .header("Authorization", "Bearer " + token.substring(0, token.length() - 3) + "abc"))
+                .andExpect(status().isUnauthorized());
+    }
+
     private org.springframework.test.web.servlet.ResultActions registrar(String login, String email, String password)
             throws Exception {
         return mockMvc.perform(post("/api/register").contentType(MediaType.APPLICATION_JSON).content(
