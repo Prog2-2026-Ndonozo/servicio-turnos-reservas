@@ -38,4 +38,18 @@ class BcryptPasswordHasherTest {
     void la_misma_clave_genera_hashes_distintos_por_la_sal() {
         assertThat(hasher.hash("clave-secreta")).isNotEqualTo(hasher.hash("clave-secreta"));
     }
+
+    @Test
+    void una_clave_de_72_bytes_se_hashea_y_coincide() {
+        String larga = "a".repeat(72);
+
+        assertThat(hasher.matches(larga, hasher.hash(larga))).isTrue();
+    }
+
+    @Test
+    void una_clave_multibyte_de_72_bytes_se_hashea_y_coincide() {
+        String larga = "ñ".repeat(36); // 72 bytes en UTF-8
+
+        assertThat(hasher.matches(larga, hasher.hash(larga))).isTrue();
+    }
 }
