@@ -30,9 +30,15 @@ services:
       DB_USERNAME: "${DB_USERNAME:?Falta DB_USERNAME en el .env (copiá .env.example)}"
       DB_PASSWORD: "${DB_PASSWORD:?Falta DB_PASSWORD en el .env (copiá .env.example)}"
       JWT_SECRET: "${JWT_SECRET:?Falta JWT_SECRET en el .env (copiá .env.example)}"
+      CATALOG_BASE_URL: http://host.docker.internal:8081
+      CATALOG_PRIVATE_KEY_FILE: /run/secrets/turnos-private.pem
     ports:
       - "${APP_PORT:-8080}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    volumes:
+      - "${CATALOGO_PRIVATE_KEY_FILE:?Falta CATALOGO_PRIVATE_KEY_FILE en el .env (ruta al PEM de turnos)}:/run/secrets/turnos-private.pem:ro"
 
 volumes:
   postgres_data:
