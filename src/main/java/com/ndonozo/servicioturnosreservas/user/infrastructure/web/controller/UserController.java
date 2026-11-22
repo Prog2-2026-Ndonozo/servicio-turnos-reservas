@@ -6,6 +6,8 @@ import com.ndonozo.servicioturnosreservas.user.infrastructure.web.dto.RegisterRe
 import com.ndonozo.servicioturnosreservas.user.infrastructure.web.dto.TokenResponse;
 import com.ndonozo.servicioturnosreservas.user.infrastructure.web.mapper.UserDtoMapper;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,13 +25,16 @@ public class UserController {
 
     @Operation(summary = "Registro de usuario" )
 
+    @SecurityRequirements
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public void register(@Valid @RequestBody RegisterRequest request){
 
         userService.register(mapper.toCommand(request));
     }
+
     @Operation( summary = "Inicia sesion y devuelve un JWT en id_token")
+    @SecurityRequirements
     @PostMapping("/authenticate")
     public TokenResponse authenticate(@Valid @RequestBody AuthenticateRequest request){
         return mapper.toResponse(userService.authenticate(request.username(),request.password()));

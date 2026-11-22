@@ -1,9 +1,5 @@
-package com.ndonozo.servicioturnosreservas.user.infrastructure.web.exception;
+package com.ndonozo.servicioturnosreservas.config;
 
-import com.ndonozo.servicioturnosreservas.user.application.exception.EmailAlreadyUsedException;
-import com.ndonozo.servicioturnosreservas.user.application.exception.InvalidCredentialsException;
-import com.ndonozo.servicioturnosreservas.user.application.exception.LoginAlreadyUsedException;
-import com.ndonozo.servicioturnosreservas.user.infrastructure.web.dto.FieldViolation;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -14,28 +10,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.List;
 
 @RestControllerAdvice
-public class ApiExceptionHandler {
-
-    @ExceptionHandler(LoginAlreadyUsedException.class)
-    public ProblemDetail handle(LoginAlreadyUsedException e) {
-        return problem(HttpStatus.CONFLICT, "LOGIN_ALREADY_USED", e.getMessage());
-    }
-
-    @ExceptionHandler(EmailAlreadyUsedException.class)
-    public ProblemDetail handle(EmailAlreadyUsedException e) {
-        return problem(HttpStatus.CONFLICT, "EMAIL_ALREADY_USED", e.getMessage());
-    }
-
-    @ExceptionHandler(InvalidCredentialsException.class)
-    public ProblemDetail handle(InvalidCredentialsException e) {
-        return problem(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS", e.getMessage());
-    }
+public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handle(MethodArgumentNotValidException e) {
         ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Hay campos inválidos");
         List<FieldViolation> errors = e.getBindingResult().getFieldErrors().stream()
-                .map(error -> new FieldViolation(error.getField(), String.valueOf(error.getDefaultMessage())))
+                // Un valor que ni siquiera se pudo convertir (una fecha mal escrita, un texto donde va un número)
+                // trae un mensaje técnico de Spring con nombres de clases: se reemplaza por uno genérico.
+                .map(error -> new FieldViolation(error.getField(),
+                        error.isBindingFailure() ? "tiene un formato inválido" : String.valueOf(error.getDefaultMessage())))
                 .toList();
         problem.setProperty("errors", errors);
         return problem;

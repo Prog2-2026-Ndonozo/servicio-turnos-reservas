@@ -1,5 +1,6 @@
 package com.ndonozo.servicioturnosreservas.user.infrastructure.web;
 
+import com.ndonozo.servicioturnosreservas.config.GlobalExceptionHandler;
 import com.ndonozo.servicioturnosreservas.config.ProblemJsonSecurityHandlers;
 import com.ndonozo.servicioturnosreservas.config.SecurityConfig;
 import com.ndonozo.servicioturnosreservas.user.application.exception.EmailAlreadyUsedException;
@@ -12,7 +13,7 @@ import com.ndonozo.servicioturnosreservas.user.domain.model.User;
 import com.ndonozo.servicioturnosreservas.user.infrastructure.web.controller.UserController;
 import com.ndonozo.servicioturnosreservas.user.infrastructure.web.dto.AuthenticateRequest;
 import com.ndonozo.servicioturnosreservas.user.infrastructure.web.dto.RegisterRequest;
-import com.ndonozo.servicioturnosreservas.user.infrastructure.web.exception.ApiExceptionHandler;
+import com.ndonozo.servicioturnosreservas.user.infrastructure.web.exception.UserExceptionHandler;
 import com.ndonozo.servicioturnosreservas.user.infrastructure.web.mapper.UserDtoMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -37,7 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(UserController.class)
-@Import({SecurityConfig.class, ProblemJsonSecurityHandlers.class, UserDtoMapper.class, ApiExceptionHandler.class})
+@Import({SecurityConfig.class, ProblemJsonSecurityHandlers.class, UserDtoMapper.class,
+        UserExceptionHandler.class, GlobalExceptionHandler.class})
 @TestPropertySource(properties = "app.security.jwt.secret=BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBw==")
 class UserControllerTest {
 
