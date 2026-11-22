@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -31,6 +33,12 @@ class ServicioTurnosReservasApplicationTests {
     @Container
     @ServiceConnection
     static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
+
+    @DynamicPropertySource
+    static void claveDelCatalogo(DynamicPropertyRegistry registry) {
+        registry.add("app.catalog.jwt.private-key-file",
+                () -> com.ndonozo.servicioturnosreservas.support.TestRsaKeys.privateKeyPemFile().toString());
+    }
 
     @Autowired
     private UserService userService;
