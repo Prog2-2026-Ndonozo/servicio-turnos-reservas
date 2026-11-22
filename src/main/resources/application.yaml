@@ -19,17 +19,20 @@ springdoc:
   swagger-ui:
     enabled: false
 
+server:
+  port: ${SERVER_PORT:8081}
+
+
 app:
   security:
     jwt:
       secret: ${JWT_SECRET}
       expiration: 24h
-
-catalog:
-  base-url: ${CATALOGO_BASE_URL:http://localhost:8081}
-  connect-timeout: ${CATALOGO_CONNECT_TIMEOUT:2s}
-  read-timeout: ${CATALOGO_READ_TIMEOUT:5s}
-  jwt:
-    private-key-file: ${CATALOGO_PRIVATE_KEY_FILE}
-    issuer: servicio-turnos
-    audience: servicio-catalogo
+  catalog:
+    base-url: ${CATALOGO_BASE_URL:http://localhost:8080}
+    connect-timeout: ${CATALOGO_CONNECT_TIMEOUT:2s}
+    read-timeout: ${CATALOGO_READ_TIMEOUT:5s}
+    jwt:
+      private-key-file: ${CATALOGO_PRIVATE_KEY_FILE}
+      issuer: servicio-turnos
+      audience: servicio-catalogo
