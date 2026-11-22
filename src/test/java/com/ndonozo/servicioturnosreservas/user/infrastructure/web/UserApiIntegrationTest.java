@@ -10,6 +10,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -43,6 +45,12 @@ class UserApiIntegrationTest {
     @Container
     @ServiceConnection
     static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
+
+    @DynamicPropertySource
+    static void claveDelCatalogo(DynamicPropertyRegistry registry) {
+        registry.add("app.catalog.jwt.private-key-file",
+                () -> com.ndonozo.servicioturnosreservas.support.TestRsaKeys.privateKeyPemFile().toString());
+    }
 
     @Autowired
     private MockMvc mockMvc;
