@@ -1,4 +1,7 @@
 package com.ndonozo.servicioturnosreservas.config;
 
-public class FieldViolation {
+public record FieldViolation(
+        String field,
+        String message
+) {
 }
