@@ -66,6 +66,8 @@ class ProfessionalApiIntegrationTest {
 
     @DynamicPropertySource
     static void configuracion(DynamicPropertyRegistry registry) {
+        registry.add("app.catedra.base-url", () -> "http://localhost:1");
+        registry.add("app.catedra.jwt", () -> "jwt-de-prueba");
         registry.add("app.catalog.jwt.private-key-file", () -> TestRsaKeys.privateKeyPemFile().toString());
         registry.add("app.catalog.base-url", () -> "http://localhost:" + CATALOGO.port());
     }

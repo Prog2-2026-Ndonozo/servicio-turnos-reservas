@@ -36,6 +36,8 @@ class ServicioTurnosReservasApplicationTests {
 
     @DynamicPropertySource
     static void claveDelCatalogo(DynamicPropertyRegistry registry) {
+        registry.add("app.catedra.base-url", () -> "http://localhost:1");
+        registry.add("app.catedra.jwt", () -> "jwt-de-prueba");
         registry.add("app.catalog.jwt.private-key-file",
                 () -> com.ndonozo.servicioturnosreservas.support.TestRsaKeys.privateKeyPemFile().toString());
     }

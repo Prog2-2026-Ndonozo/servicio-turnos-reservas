@@ -39,6 +39,8 @@ class OpenApiContractTest {
 
     @DynamicPropertySource
     static void claveDelCatalogo(DynamicPropertyRegistry registry) {
+        registry.add("app.catedra.base-url", () -> "http://localhost:1");
+        registry.add("app.catedra.jwt", () -> "jwt-de-prueba");
         registry.add("app.catalog.jwt.private-key-file", () -> TestRsaKeys.privateKeyPemFile().toString());
     }
 
@@ -80,5 +82,17 @@ class OpenApiContractTest {
                 .andExpect(jsonPath("$.paths['/api/register'].post.security").value(empty()))
                 .andExpect(jsonPath("$.paths['/api/authenticate'].post.security").value(empty()))
                 .andExpect(jsonPath("$.paths['/api/professionals/search'].get.security").doesNotExist());
+    }
+
+    @Test
+    void la_disponibilidad_documenta_sus_tres_parametros_obligatorios_y_sus_respuestas() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/availability'].get.parameters[*].name")
+                        .value(containsInAnyOrder("professionalId", "from", "to")))
+                .andExpect(jsonPath("$.paths['/api/availability'].get.parameters[?(@.required==true)].name")
+                        .value(containsInAnyOrder("professionalId", "from", "to")))
+                .andExpect(jsonPath("$.paths['/api/availability'].get.responses.keys()")
+                        .value(containsInAnyOrder("200", "400", "401", "404", "502", "503")))
+                .andExpect(jsonPath("$.paths['/api/availability'].get.security").doesNotExist());
     }
 }
