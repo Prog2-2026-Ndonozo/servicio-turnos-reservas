@@ -30,6 +30,8 @@ services:
       DB_USERNAME: "${DB_USERNAME:?Falta DB_USERNAME en el .env (copiá .env.example)}"
       DB_PASSWORD: "${DB_PASSWORD:?Falta DB_PASSWORD en el .env (copiá .env.example)}"
       JWT_SECRET: "${JWT_SECRET:?Falta JWT_SECRET en el .env (copiá .env.example)}"
+      CATEDRA_BASE_URL: "${CATEDRA_BASE_URL:?Falta CATEDRA_BASE_URL en el .env (copiá .env.example)}"
+      CATEDRA_JWT: "${CATEDRA_JWT:?Falta CATEDRA_JWT en el .env (copiá .env.example)}"
       CATALOGO_BASE_URL: http://host.docker.internal:8080
       SERVER_PORT: 8080
       CATALOGO_PRIVATE_KEY_FILE: /run/secrets/turnos-private.pem
