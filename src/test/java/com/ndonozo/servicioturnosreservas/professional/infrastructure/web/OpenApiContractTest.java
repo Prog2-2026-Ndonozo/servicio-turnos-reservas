@@ -95,4 +95,17 @@ class OpenApiContractTest {
                         .value(containsInAnyOrder("200", "400", "401", "404", "502", "503")))
                 .andExpect(jsonPath("$.paths['/api/availability'].get.security").doesNotExist());
     }
+
+    @Test
+    void la_reserva_documenta_su_cuerpo_sus_respuestas_y_no_expone_el_token() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/reservations'].post.requestBody.required").value(true))
+                .andExpect(jsonPath("$.components.schemas.CreateReservationRequest.required")
+                        .value(containsInAnyOrder("professionalId", "date", "startTime")))
+                .andExpect(jsonPath("$.components.schemas.ReservationResponse.properties.reservationProcessId").exists())
+                .andExpect(jsonPath("$.components.schemas.ReservationResponse.properties.holdId").doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/reservations'].post.responses.keys()")
+                        .value(containsInAnyOrder("201", "400", "401", "404", "409", "502", "503")))
+                .andExpect(jsonPath("$.paths['/api/reservations'].post.parameters").doesNotExist());
+    }
 }
