@@ -47,7 +47,7 @@ registro propio los deja opcionales, con máximo 50 y sin mínimo (ADR-0003). `r
   de un puerto de entrada de `reservation`; el dominio no conoce Kafka. El listener despacha por `eventType`; en T8 solo trata
   `AdditionalInformationRequested` y registra y descarta el resto. Reintentos con espera exponencial y recoverer, siguiendo la idea
   de los ADR-0026 y ADR-0030 del catálogo. Servidor, grupo de consumo y topic vienen de la configuración, nunca del código.
-- **Dos tramos:** 8a, confirmar por REST (migración `V3`, endpoint); 8b, el consumidor de Kafka y la tabla `processed_event`.
+- **Dos tramos:** 8a, confirmar por REST (endpoint; no necesita migración porque el estado ya existe); 8b, el consumidor de Kafka, la migración `V3` y la tabla `processed_event`.
 
 ### Errores de la confirmación
 | Caso | HTTP | `code` |
@@ -70,7 +70,7 @@ desde los dos caminos elimina la carrera entre el REST y Kafka sin reintentos. U
 con el efecto, es la forma más simple de cumplir «al menos una vez» sin duplicar efectos.
 
 ## Consecuencias
-- Nueva migración `V3` (columna `phone_request_event_id` y tabla `processed_event`); `spring-kafka` entra al `pom.xml`.
+- En 8b: nueva migración `V3` (columna `phone_request_event_id` y tabla `processed_event`); `spring-kafka` entra al `pom.xml`.
 - **Limitación:** los eventos que el listener no trata en T8 se consumen y se descartan; no se vuelven a recibir cuando T9 los trate.
   En desarrollo no hay datos de producción que perder; T12 reconcilia por REST los procesos que queden sin resultado.
 - **Limitación:** el nombre se pide en cada reserva.
