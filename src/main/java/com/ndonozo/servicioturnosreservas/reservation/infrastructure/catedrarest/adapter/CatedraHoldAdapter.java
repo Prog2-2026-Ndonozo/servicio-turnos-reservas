@@ -1,9 +1,11 @@
 package com.ndonozo.servicioturnosreservas.reservation.infrastructure.catedrarest.adapter;
 
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmHoldResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.HoldResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.out.HoldPort;
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.catedrarest.client.CatedraHoldRejectedException;
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.catedrarest.client.CatedraHoldRestClient;
+import com.ndonozo.servicioturnosreservas.reservation.infrastructure.catedrarest.dto.ConfirmHoldRequest;
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.catedrarest.dto.HoldRequest;
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.catedrarest.mapper.CatedraHoldMapper;
 import lombok.RequiredArgsConstructor;
@@ -32,5 +34,14 @@ public class CatedraHoldAdapter implements HoldPort {
             return mapper.toRejection(e.getCode());
         }
     }
-}
 
+    @Override
+    public ConfirmHoldResult confirmHold(String holdId, String externalPatientId, String firstName, String lastName) {
+        try {
+            client.confirmHold(holdId, new ConfirmHoldRequest(externalPatientId, firstName, lastName));
+            return new ConfirmHoldResult.Confirmed();
+        } catch (CatedraHoldRejectedException e) {
+            return mapper.toConfirmRejection(e.getCode());
+        }
+    }
+}
