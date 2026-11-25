@@ -108,4 +108,16 @@ class OpenApiContractTest {
                         .value(containsInAnyOrder("201", "400", "401", "404", "409", "502", "503")))
                 .andExpect(jsonPath("$.paths['/api/reservations'].post.parameters").doesNotExist());
     }
+
+    @Test
+    void la_confirmacion_documenta_la_ruta_el_cuerpo_y_sus_respuestas() throws Exception {
+        String ruta = "$.paths['/api/reservations/{reservationProcessId}/confirm'].post";
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath(ruta + ".requestBody.required").value(true))
+                .andExpect(jsonPath("$.components.schemas.ConfirmReservationRequest.required")
+                        .value(containsInAnyOrder("firstName", "lastName")))
+                .andExpect(jsonPath(ruta + ".parameters[0].name").value("reservationProcessId"))
+                .andExpect(jsonPath(ruta + ".responses.keys()")
+                        .value(containsInAnyOrder("202", "400", "401", "404", "409", "502", "503")));
+    }
 }
