@@ -7,9 +7,15 @@ import com.ndonozo.servicioturnosreservas.reservation.application.exception.Prof
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.ProfessionalNotFoundException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.SlotAlreadyHeldException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.SlotAlreadyReservedException;
+import com.ndonozo.servicioturnosreservas.reservation.application.exception.HoldExpiredException;
+import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidReservationStateException;
+import com.ndonozo.servicioturnosreservas.reservation.application.exception.ReservationNotFoundException;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationCommand;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.CreateReservationCommand;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.CreateReservationResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ReservationProcess;
+import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.ConfirmReservationUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.CreateReservationUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +25,7 @@ import org.springframework.stereotype.Service;
 public class ReservationService {
 
     private final CreateReservationUseCase createReservation;
+    private final ConfirmReservationUseCase confirmReservation;
 
     public ReservationProcess createReservation(CreateReservationCommand command) {
         return switch (createReservation.createReservation(command)) {
@@ -37,6 +44,20 @@ public class ReservationService {
                     throw new AgendaUnavailableException("El catálogo no está disponible");
             case CreateReservationResult.CatalogFailed failed ->
                     throw new AgendaIntegrationException("Falló la integración con el catálogo");
+        };
+    }
+
+    public ReservationProcess confirmReservation(ConfirmReservationCommand command) {
+        return switch (confirmReservation.confirmReservation(command)) {
+            case ConfirmReservationResult.Confirmed confirmed -> confirmed.process();
+            case ConfirmReservationResult.NotFound notFound ->
+                    throw new ReservationNotFoundException("No existe la reserva " + command.reservationProcessId());
+            case ConfirmReservationResult.InvalidState invalidState ->
+                    throw new InvalidReservationStateException("La reserva no se puede confirmar en su estado actual");
+            case ConfirmReservationResult.HoldExpired expired ->
+                    throw new HoldExpiredException("El turno retenido venció: hay que empezar de nuevo");
+            case ConfirmReservationResult.SlotAlreadyReserved reserved ->
+                    throw new SlotAlreadyReservedException("El turno ya está reservado");
         };
     }
 }

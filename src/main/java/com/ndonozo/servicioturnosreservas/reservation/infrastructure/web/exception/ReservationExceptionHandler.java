@@ -4,9 +4,12 @@ import com.ndonozo.servicioturnosreservas.reservation.application.exception.Agen
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.AgendaUnavailableException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.CatedraIntegrationException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.CatedraUnavailableException;
+import com.ndonozo.servicioturnosreservas.reservation.application.exception.HoldExpiredException;
+import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidReservationStateException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidSlotException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.ProfessionalDisabledException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.ProfessionalNotFoundException;
+import com.ndonozo.servicioturnosreservas.reservation.application.exception.ReservationNotFoundException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.SlotAlreadyHeldException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.SlotAlreadyReservedException;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +45,21 @@ public class ReservationExceptionHandler {
     @ExceptionHandler(SlotAlreadyReservedException.class)
     public ProblemDetail handle(SlotAlreadyReservedException e) {
         return problem(HttpStatus.CONFLICT, "SLOT_ALREADY_RESERVED", e.getMessage());
+    }
+
+    @ExceptionHandler(ReservationNotFoundException.class)
+    public ProblemDetail handle(ReservationNotFoundException e) {
+        return problem(HttpStatus.NOT_FOUND, "RESERVATION_NOT_FOUND", e.getMessage());
+    }
+
+    @ExceptionHandler(InvalidReservationStateException.class)
+    public ProblemDetail handle(InvalidReservationStateException e) {
+        return problem(HttpStatus.CONFLICT, "INVALID_RESERVATION_STATE", e.getMessage());
+    }
+
+    @ExceptionHandler(HoldExpiredException.class)
+    public ProblemDetail handle(HoldExpiredException e) {
+        return problem(HttpStatus.CONFLICT, "HOLD_EXPIRED", e.getMessage());
     }
 
     @ExceptionHandler(AgendaUnavailableException.class)

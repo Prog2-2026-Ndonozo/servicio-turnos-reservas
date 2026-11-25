@@ -1,6 +1,7 @@
 package com.ndonozo.servicioturnosreservas.reservation.infrastructure.web.controller;
 
 import com.ndonozo.servicioturnosreservas.reservation.application.service.ReservationService;
+import com.ndonozo.servicioturnosreservas.reservation.infrastructure.web.dto.ConfirmReservationRequest;
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.web.dto.CreateReservationRequest;
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.web.dto.ReservationResponse;
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.web.mapper.ReservationDtoMapper;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,6 +46,26 @@ public class ReservationController {
     @ResponseStatus(HttpStatus.CREATED)
     public ReservationResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateReservationRequest request) {
         return mapper.toResponse(reservationService.createReservation(mapper.toCommand(userId(jwt), request)));
+    }
+
+    @Operation(summary = "Confirma el turno retenido",
+            description = "Confirma inicialmente el hold con el nombre y el apellido del paciente. Si el proceso ya esperaba el "
+                    + "teléfono, responde igual (es idempotente). Pasado expiresAt no se puede confirmar. No se reintenta solo: "
+                    + "ante un 503 el usuario repite y la cátedra informa si ya estaba confirmado.")
+    @ApiResponse(responseCode = "202", description = "Confirmación aceptada; el proceso queda en WAITING_FOR_PHONE")
+    @ApiResponse(responseCode = "400", description = "Datos inválidos (VALIDATION_ERROR, MALFORMED_REQUEST)")
+    @ApiResponse(responseCode = "401", description = "Token ausente, inválido o vencido (UNAUTHENTICATED)")
+    @ApiResponse(responseCode = "404", description = "La reserva no existe o no es del usuario (RESERVATION_NOT_FOUND)")
+    @ApiResponse(responseCode = "409", description = "El turno venció (HOLD_EXPIRED), ya lo reservó otro (SLOT_ALREADY_RESERVED) "
+            + "o el proceso no está en un estado que se pueda confirmar (INVALID_RESERVATION_STATE)")
+    @ApiResponse(responseCode = "502", description = "Error de integración con la cátedra (CATEDRA_ERROR)")
+    @ApiResponse(responseCode = "503", description = "La cátedra no está disponible (CATEDRA_UNAVAILABLE)")
+    @PostMapping("/reservations/{reservationProcessId}/confirm")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public ReservationResponse confirm(@AuthenticationPrincipal Jwt jwt, @PathVariable String reservationProcessId,
+                                       @Valid @RequestBody ConfirmReservationRequest request) {
+        return mapper.toResponse(reservationService.confirmReservation(
+                mapper.toCommand(userId(jwt), reservationProcessId, request)));
     }
 
     // El id sale del claim uid que emite este mismo servicio (ADR-0003). Sin él el token no sirve para reservar.

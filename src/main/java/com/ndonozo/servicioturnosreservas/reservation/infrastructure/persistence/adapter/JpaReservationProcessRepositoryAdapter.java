@@ -7,6 +7,8 @@ import com.ndonozo.servicioturnosreservas.reservation.infrastructure.persistence
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Component
 @RequiredArgsConstructor
 public class JpaReservationProcessRepositoryAdapter implements ReservationProcessRepository {
@@ -17,5 +19,10 @@ public class JpaReservationProcessRepositoryAdapter implements ReservationProces
     @Override
     public ReservationProcess save(ReservationProcess process) {
         return mapper.toDomain(repository.saveAndFlush(mapper.toEntity(process)));
+    }
+
+    @Override
+    public Optional<ReservationProcess> findByReservationProcessIdAndUserId(String reservationProcessId, long userId) {
+        return repository.findByReservationProcessIdAndUserId(reservationProcessId, userId).map(mapper::toDomain);
     }
 }

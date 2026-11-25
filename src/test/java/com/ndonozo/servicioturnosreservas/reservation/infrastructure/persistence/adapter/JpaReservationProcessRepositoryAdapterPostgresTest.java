@@ -123,4 +123,36 @@ class JpaReservationProcessRepositoryAdapterPostgresTest {
         assertThatThrownBy(() -> jdbc.update("UPDATE reservation_process SET status = 'INVENTADO'"))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
+
+    @Test
+    void busca_el_proceso_por_su_id_solo_si_es_del_usuario() {
+        adapter.save(proceso("process-1", "hold-1"));
+        em.clear();
+
+        assertThat(adapter.findByReservationProcessIdAndUserId("process-1", userId)).get()
+                .satisfies(p -> {
+                    assertThat(p.holdId()).isEqualTo("hold-1");
+                    assertThat(p.status()).isEqualTo(ReservationStatus.HELD);
+                });
+        assertThat(adapter.findByReservationProcessIdAndUserId("process-1", userId + 1)).isEmpty();
+        assertThat(adapter.findByReservationProcessIdAndUserId("no-existe", userId)).isEmpty();
+    }
+
+    @Test
+    void guardar_un_proceso_ya_existente_actualiza_su_fila_y_no_crea_otra() {
+        ReservationProcess guardado = adapter.save(proceso("process-1", "hold-1"));
+        em.clear();
+
+        ReservationProcess esperando = adapter.save(guardado.transitionTo(ReservationStatus.WAITING_FOR_PHONE, FECHA.plusSeconds(30)));
+        em.clear();
+
+        assertThat(esperando.id()).isEqualTo(guardado.id());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM reservation_process", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT status FROM reservation_process", String.class)).isEqualTo("WAITING_FOR_PHONE");
+        assertThat(adapter.findByReservationProcessIdAndUserId("process-1", userId)).get()
+                .satisfies(p -> {
+                    assertThat(p.createdDate()).isEqualTo(FECHA);
+                    assertThat(p.lastModifiedDate()).isEqualTo(FECHA.plusSeconds(30));
+                });
+    }
 }
