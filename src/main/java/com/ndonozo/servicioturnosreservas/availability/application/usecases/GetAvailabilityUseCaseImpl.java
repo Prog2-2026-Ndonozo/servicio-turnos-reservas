@@ -18,23 +18,31 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+/**
+ * Calcula los turnos libres de un profesional entre dos fechas: horarios semanales (catálogo) menos las ocupaciones
+ * (cátedra). No guarda nada: cada pedido consulta las dos fuentes en vivo (E §3, E §4.2).
+ */
 @Component
 @RequiredArgsConstructor
 public class GetAvailabilityUseCaseImpl implements GetAvailabilityUseCase {
     static final int MAX_RANGE_DAYS = 31;
 
+    // Puerto de entrada de OTRO módulo (professional): se llama en el mismo programa, no por REST.
     private final GetProfessionalAgendaUseCase agendas;
+    // Puerto de salida: las ocupaciones se piden a la cátedra por REST.
     private final OccupancyPort occupancyPort;
     private final Clock clock;
 
     @Override
     public AvailabilityResult getAvailability(long professionalId, LocalDate from, LocalDate to) {
+        // 1. Se valida el rango: el inicio no puede ser posterior al fin ni superar 31 días.
         if (from.isAfter(to)) {
             return new AvailabilityResult.InvalidRange("La fecha inicial no puede ser posterior a la final");
         }
         if (ChronoUnit.DAYS.between(from, to) + 1 > MAX_RANGE_DAYS) {
             return new AvailabilityResult.InvalidRange("El rango no puede superar los " + MAX_RANGE_DAYS + " días");
         }
+        // 2. Se pide la agenda a professional; cada resultado (profesional inexistente, catálogo caído...) se traduce.
         return switch (agendas.getAgenda(professionalId)) {
             case ProfessionalAgendaResult.Found found -> available(found.agenda(), professionalId, from, to);
             case ProfessionalAgendaResult.NotFound notFound -> new AvailabilityResult.ProfessionalNotFound();
@@ -50,6 +58,7 @@ public class GetAvailabilityUseCaseImpl implements GetAvailabilityUseCase {
         }
         // Las ocupaciones se consultan en cada pedido: lo que dice la cátedra ahora es lo que vale (E §3, E §4.2).
         List<Occupancy> occupancies = occupancyPort.findOccupancies(professionalId, from, to);
+        // 3. SlotCalculator (dominio puro) arma los turnos del horario, descarta los ocupados y los que ya empezaron.
         return new AvailabilityResult.Found(new Availability(professionalId, from, to,
                 SlotCalculator.freeSlots(agenda.getWeeklySchedules(), occupancies, from, to, LocalDateTime.now(clock))));
     }
