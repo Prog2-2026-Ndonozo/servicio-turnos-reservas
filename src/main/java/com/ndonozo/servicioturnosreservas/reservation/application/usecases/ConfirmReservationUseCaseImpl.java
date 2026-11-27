@@ -1,5 +1,6 @@
 package com.ndonozo.servicioturnosreservas.reservation.application.usecases;
 
+import com.ndonozo.servicioturnosreservas.reservation.domain.exception.ReservationConflictException;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmHoldResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationCommand;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationResult;
@@ -58,7 +59,15 @@ public class ConfirmReservationUseCaseImpl implements ConfirmReservationUseCase 
     }
 
     private ConfirmReservationResult waitingForPhone(ReservationProcess process, Instant now) {
-        return new ConfirmReservationResult.Confirmed(
-                repository.save(process.transitionTo(ReservationStatus.WAITING_FOR_PHONE, now)));
+        try {
+            return new ConfirmReservationResult.Confirmed(
+                    repository.save(process.transitionTo(ReservationStatus.WAITING_FOR_PHONE, now)));
+        } catch (ReservationConflictException e) {
+            // El evento de Kafka llegó primero y ya movió el proceso: se devuelve lo que guardó (ADR-0010).
+            return repository.findByReservationProcessIdAndUserId(process.reservationProcessId(), process.userId())
+                    .filter(actual -> actual.status() == ReservationStatus.WAITING_FOR_PHONE)
+                    .<ConfirmReservationResult>map(ConfirmReservationResult.Confirmed::new)
+                    .orElseThrow(() -> e);
+        }
     }
 }

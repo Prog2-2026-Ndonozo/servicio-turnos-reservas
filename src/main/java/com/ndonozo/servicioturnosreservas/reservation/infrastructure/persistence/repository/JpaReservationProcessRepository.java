@@ -7,5 +7,7 @@ import java.util.Optional;
 
 public interface JpaReservationProcessRepository extends JpaRepository<ReservationProcessEntity, Long> {
 
+    Optional<ReservationProcessEntity> findByReservationProcessId(String reservationProcessId);
+
     Optional<ReservationProcessEntity> findByReservationProcessIdAndUserId(String reservationProcessId, Long userId);
 }

@@ -19,7 +19,9 @@ public record ReservationProcess(
         ReservationStatus status,
         Instant expiresAt,
         Instant createdDate,
-        Instant lastModifiedDate
+        Instant lastModifiedDate,
+        String phoneRequestEventId,
+        Long version
 ) {
     /** Devuelve el proceso en el estado nuevo, o falla si la máquina de estados no lo permite. */
     public ReservationProcess transitionTo(ReservationStatus target, Instant now) {
@@ -27,5 +29,10 @@ public record ReservationProcess(
             throw new IllegalStateException("Transición no permitida: " + status + " -> " + target);
         }
         return toBuilder().status(target).lastModifiedDate(now).build();
+    }
+
+    /** Guarda el eventId del último pedido de teléfono: T9 lo devuelve como requestEventId. */
+    public ReservationProcess withPhoneRequestEventId(String eventId, Instant now) {
+        return toBuilder().phoneRequestEventId(eventId).lastModifiedDate(now).build();
     }
 }
