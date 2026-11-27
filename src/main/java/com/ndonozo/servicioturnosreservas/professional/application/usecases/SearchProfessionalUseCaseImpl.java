@@ -9,9 +9,14 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * Busca profesionales. Como las categorías, no tiene reglas propias: reenvía los criterios de búsqueda al catálogo
+ * por el puerto de salida y devuelve lo que este responde.
+ */
 @Component
 @RequiredArgsConstructor
 public class SearchProfessionalUseCaseImpl implements SearchProfessionalUseCase {
+    // Puerto de salida: el adaptador llama al catálogo por HTTP con el JWT técnico.
     private final ProfessionalSearchPort searchPort;
 
     @Override

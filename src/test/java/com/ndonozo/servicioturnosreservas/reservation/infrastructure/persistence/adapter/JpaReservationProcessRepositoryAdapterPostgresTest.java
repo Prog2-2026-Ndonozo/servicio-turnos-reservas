@@ -183,6 +183,31 @@ class JpaReservationProcessRepositoryAdapterPostgresTest {
     }
 
     @Test
+    void el_reservationId_y_el_motivo_del_rechazo_se_guardan_y_se_leen() {
+        ReservationProcess guardado = adapter.save(proceso("process-1", "hold-1")
+                .transitionTo(ReservationStatus.WAITING_FOR_PHONE, FECHA.plusSeconds(1)));
+        em.clear();
+        assertThat(guardado.reservationId()).isNull();
+        assertThat(guardado.rejectionReason()).isNull();
+
+        ReservationProcess enviado = adapter.save(guardado.transitionTo(ReservationStatus.PHONE_SUBMITTED, FECHA.plusSeconds(2)));
+        ReservationProcess rechazado = adapter.save(enviado.rejectedWith("INVALID_PHONE_NUMBER", VENCE.plusSeconds(60), FECHA.plusSeconds(3)));
+        ReservationProcess reenviado = adapter.save(rechazado.transitionTo(ReservationStatus.PHONE_SUBMITTED, FECHA.plusSeconds(4)));
+        em.clear();
+        assertThat(adapter.findByReservationProcessId("process-1")).get().satisfies(p -> {
+            assertThat(p.rejectionReason()).isEqualTo("INVALID_PHONE_NUMBER");
+            assertThat(p.expiresAt()).isEqualTo(VENCE.plusSeconds(60));
+        });
+
+        adapter.save(reenviado.confirmedAs(8251L, FECHA.plusSeconds(5)));
+        em.clear();
+        assertThat(adapter.findByReservationProcessId("process-1")).get().satisfies(p -> {
+            assertThat(p.status()).isEqualTo(ReservationStatus.CONFIRMED);
+            assertThat(p.reservationId()).isEqualTo(8251L);
+        });
+    }
+
+    @Test
     void cada_guardado_sube_la_version_y_un_guardado_con_una_version_vieja_es_un_choque() {
         ReservationProcess nuevo = adapter.save(proceso("process-1", "hold-1"));
         em.clear();

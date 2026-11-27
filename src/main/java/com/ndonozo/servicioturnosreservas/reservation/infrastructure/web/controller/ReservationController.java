@@ -4,6 +4,7 @@ import com.ndonozo.servicioturnosreservas.reservation.application.service.Reserv
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.web.dto.ConfirmReservationRequest;
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.web.dto.CreateReservationRequest;
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.web.dto.ReservationResponse;
+import com.ndonozo.servicioturnosreservas.reservation.infrastructure.web.dto.SubmitPhoneRequest;
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.web.mapper.ReservationDtoMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -65,6 +66,27 @@ public class ReservationController {
     public ReservationResponse confirm(@AuthenticationPrincipal Jwt jwt, @PathVariable String reservationProcessId,
                                        @Valid @RequestBody ConfirmReservationRequest request) {
         return mapper.toResponse(reservationService.confirmReservation(
+                mapper.toCommand(userId(jwt), reservationProcessId, request)));
+    }
+
+    @Operation(summary = "Envía el teléfono del paciente",
+            description = "Responde el pedido de teléfono de la cátedra. El resultado (confirmada, teléfono rechazado, vencida o "
+                    + "inválida) llega después por Kafka y se refleja en el estado de la reserva. Si el teléfono es rechazado, "
+                    + "el proceso vuelve a WAITING_FOR_PHONE y se puede enviar otro hasta expiresAt. Si la cátedra todavía no "
+                    + "pidió el teléfono, repetí en unos segundos. No se reintenta solo.")
+    @ApiResponse(responseCode = "202", description = "Teléfono enviado; el proceso queda en PHONE_SUBMITTED")
+    @ApiResponse(responseCode = "400", description = "Datos inválidos (VALIDATION_ERROR, MALFORMED_REQUEST) o teléfono con "
+            + "formato inválido (INVALID_PHONE_NUMBER)")
+    @ApiResponse(responseCode = "401", description = "Token ausente, inválido o vencido (UNAUTHENTICATED)")
+    @ApiResponse(responseCode = "404", description = "La reserva no existe o no es del usuario (RESERVATION_NOT_FOUND)")
+    @ApiResponse(responseCode = "409", description = "El turno venció (HOLD_EXPIRED), el proceso no espera un teléfono o la "
+            + "cátedra todavía no lo pidió (INVALID_RESERVATION_STATE) o cambió mientras se procesaba (CONCURRENT_UPDATE)")
+    @ApiResponse(responseCode = "503", description = "No se pudo enviar el teléfono a la cátedra (CATEDRA_UNAVAILABLE)")
+    @PostMapping("/reservations/{reservationProcessId}/phone")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public ReservationResponse submitPhone(@AuthenticationPrincipal Jwt jwt, @PathVariable String reservationProcessId,
+                                           @Valid @RequestBody SubmitPhoneRequest request) {
+        return mapper.toResponse(reservationService.submitPhone(
                 mapper.toCommand(userId(jwt), reservationProcessId, request)));
     }
 

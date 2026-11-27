@@ -12,6 +12,8 @@ import com.ndonozo.servicioturnosreservas.reservation.application.exception.Rese
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.SlotAlreadyHeldException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.SlotAlreadyReservedException;
 import com.ndonozo.servicioturnosreservas.reservation.application.service.ReservationService;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.AppointmentResultEvent;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.AppointmentResultOutcome;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationCommand;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.CreateReservationCommand;
@@ -23,6 +25,7 @@ import com.ndonozo.servicioturnosreservas.reservation.domain.model.SubmitPhoneCo
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.SubmitPhoneResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.ConfirmReservationUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.CreateReservationUseCase;
+import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.HandleAppointmentResultUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.HandlePhoneRequestedUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.SubmitPhoneUseCase;
 import org.junit.jupiter.api.Test;
@@ -61,8 +64,11 @@ class ReservationServiceTest {
     @Mock
     private SubmitPhoneUseCase submitPhoneUseCase;
 
+    @Mock
+    private HandleAppointmentResultUseCase resultUseCase;
+
     private ReservationService service() {
-        return new ReservationService(useCase, confirmUseCase, phoneUseCase, submitPhoneUseCase);
+        return new ReservationService(useCase, confirmUseCase, phoneUseCase, submitPhoneUseCase, resultUseCase);
     }
 
     @Test
@@ -139,5 +145,13 @@ class ReservationServiceTest {
                 .hasMessageContaining("todavía no pidió");
         assertThatThrownBy(() -> service().submitPhone(ENVIAR_TELEFONO)).isInstanceOf(HoldExpiredException.class);
         assertThatThrownBy(() -> service().submitPhone(ENVIAR_TELEFONO)).isInstanceOf(InvalidPhoneNumberException.class);
+    }
+
+    @Test
+    void el_resultado_del_proceso_se_delega_y_su_resultado_se_devuelve_tal_cual() {
+        AppointmentResultEvent evento = new AppointmentResultEvent.Expired("evt-1", "process-1", "hold-1");
+        when(resultUseCase.handleResult(evento)).thenReturn(new AppointmentResultOutcome.Duplicate());
+
+        assertThat(service().handleAppointmentResult(evento)).isInstanceOf(AppointmentResultOutcome.Duplicate.class);
     }
 }

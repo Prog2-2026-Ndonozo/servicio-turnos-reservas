@@ -83,6 +83,7 @@ y un viaje por Kafka. Guardar `reservation_id` deja listo T11 (cancelar necesita
 - **Limitación:** no se compara `requestEventId` de los resultados con el guardado; se valida el `holdId`, como en ADR-0010.
 - Enviar el teléfono por segunda vez tras un rechazo genera un `eventId` nuevo (I §15.7).
 
-## Pendiente
-- Probar 9a + 9b a mano con la cátedra real: confirmar el hold, enviar el teléfono y ver el proceso en `CONFIRMED` con
-  `reservation_id`.
+## Verificación manual (2026-11-27)
+Probado a mano con la cátedra real, con 9a y 9b terminados: confirmar el hold, enviar el teléfono y recibir la confirmación,
+que lleva el proceso a `CONFIRMED` con su `reservation_id`. El rechazo, la expiración y el proceso inválido no se provocaron
+contra la cátedra: los cubren los tests con Kafka embebido y PostgreSQL.

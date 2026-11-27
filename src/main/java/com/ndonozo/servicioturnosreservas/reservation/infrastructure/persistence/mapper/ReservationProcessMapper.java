@@ -23,6 +23,8 @@ public class ReservationProcessMapper {
                 .lastModifiedDate(entity.getLastModifiedDate())
                 .phoneRequestEventId(entity.getPhoneRequestEventId())
                 .version(entity.getVersion())
+                .reservationId(entity.getReservationId())
+                .rejectionReason(entity.getRejectionReason())
                 .build();
     }
 
@@ -42,6 +44,8 @@ public class ReservationProcessMapper {
         entity.setLastModifiedDate(process.lastModifiedDate());
         entity.setPhoneRequestEventId(process.phoneRequestEventId());
         entity.setVersion(process.version());
+        entity.setReservationId(process.reservationId());
+        entity.setRejectionReason(process.rejectionReason());
         return entity;
     }
 }

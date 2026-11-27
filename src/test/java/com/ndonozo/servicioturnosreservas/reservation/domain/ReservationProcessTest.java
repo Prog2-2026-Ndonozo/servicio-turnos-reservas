@@ -75,4 +75,38 @@ class ReservationProcessTest {
     void el_external_patient_id_entra_en_los_100_caracteres_que_admite_la_catedra() {
         assertThat(ExternalPatientId.of(Long.MAX_VALUE).length()).isLessThanOrEqualTo(100);
     }
+
+    @Test
+    void confirmedAs_pasa_a_CONFIRMED_y_guarda_el_reservationId() {
+        ReservationProcess nuevo = proceso(ReservationStatus.PHONE_SUBMITTED).confirmedAs(8251L, AHORA);
+
+        assertThat(nuevo.status()).isEqualTo(ReservationStatus.CONFIRMED);
+        assertThat(nuevo.reservationId()).isEqualTo(8251L);
+        assertThat(nuevo.lastModifiedDate()).isEqualTo(AHORA);
+    }
+
+    @Test
+    void confirmedAs_solo_se_puede_desde_PHONE_SUBMITTED() {
+        assertThatThrownBy(() -> proceso(ReservationStatus.WAITING_FOR_PHONE).confirmedAs(1L, AHORA))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void rejectedWith_vuelve_a_WAITING_FOR_PHONE_con_el_motivo_y_el_vencimiento_nuevo() {
+        Instant nuevoVencimiento = Instant.parse("2026-11-24T12:20:00Z");
+
+        ReservationProcess nuevo = proceso(ReservationStatus.PHONE_SUBMITTED)
+                .rejectedWith("INVALID_PHONE_NUMBER", nuevoVencimiento, AHORA);
+
+        assertThat(nuevo.status()).isEqualTo(ReservationStatus.WAITING_FOR_PHONE);
+        assertThat(nuevo.rejectionReason()).isEqualTo("INVALID_PHONE_NUMBER");
+        assertThat(nuevo.expiresAt()).isEqualTo(nuevoVencimiento);
+    }
+
+    @Test
+    void rejectedWith_sin_vencimiento_conserva_el_que_tenia() {
+        ReservationProcess nuevo = proceso(ReservationStatus.PHONE_SUBMITTED).rejectedWith("INVALID_PHONE_NUMBER", null, AHORA);
+
+        assertThat(nuevo.expiresAt()).isEqualTo(Instant.parse("2026-11-24T12:10:00Z"));
+    }
 }

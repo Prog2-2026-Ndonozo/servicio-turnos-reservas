@@ -1,13 +1,19 @@
 package com.ndonozo.servicioturnosreservas.reservation.infrastructure.kafka;
 
 import com.ndonozo.servicioturnosreservas.reservation.application.service.ReservationService;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.AppointmentResultEvent;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.AppointmentResultOutcome;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.PhoneRequestResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.PhoneRequestedEvent;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.ReservationProcess;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.ReservationStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -61,13 +67,105 @@ class AppointmentActionsListenerTest {
     }
 
     @Test
-    void otros_tipos_de_evento_se_ignoran_hasta_T9() {
-        for (String tipo : new String[]{"AppointmentConfirmed", "AdditionalInformationRejected", "AppointmentProcessExpired",
-                "AppointmentProcessInvalid", "AppointmentCancelled", "Desconocido"}) {
+    void la_cancelacion_y_los_tipos_desconocidos_se_ignoran() {
+        for (String tipo : new String[]{"AppointmentCancelled", "Desconocido"}) {
             listener().onMessage(PEDIDO.replace("AdditionalInformationRequested", tipo));
         }
+        listener().onMessage("{\"eventId\":\"x\"}");
 
         verifyNoInteractions(service);
+    }
+
+    @Test
+    void la_confirmacion_llega_a_la_fachada_con_el_reservationId() {
+        AppointmentResultEvent esperado = new AppointmentResultEvent.Confirmed("confirmation-event-7d10", "process-a92b47d0", "hold-6c0c2f41", 8251L);
+        when(service.handleAppointmentResult(esperado)).thenReturn(new AppointmentResultOutcome.Duplicate());
+
+        listener().onMessage(resultado("AppointmentConfirmed", "confirmation-event-7d10", "\"reservationId\":8251,\"status\":\"CONFIRMED\""));
+
+        verify(service).handleAppointmentResult(esperado);
+    }
+
+    @Test
+    void el_rechazo_llega_con_el_motivo_y_el_vencimiento_nuevo() {
+        AppointmentResultEvent esperado = new AppointmentResultEvent.Rejected("rejection-event-7d11", "process-a92b47d0",
+                "hold-6c0c2f41", "INVALID_PHONE_NUMBER", Instant.parse("2026-09-10T14:44:50Z"));
+        when(service.handleAppointmentResult(esperado)).thenReturn(new AppointmentResultOutcome.Duplicate());
+
+        listener().onMessage(resultado("AdditionalInformationRejected", "rejection-event-7d11",
+                "\"reason\":\"INVALID_PHONE_NUMBER\",\"message\":\"El telefono ingresado no es valido.\",\"expiresAt\":\"2026-09-10T14:44:50Z\""));
+
+        verify(service).handleAppointmentResult(esperado);
+    }
+
+    @Test
+    void un_rechazo_con_vencimiento_ilegible_o_sin_motivo_igual_se_aplica() {
+        when(service.handleAppointmentResult(any())).thenReturn(new AppointmentResultOutcome.Duplicate());
+
+        listener().onMessage(resultado("AdditionalInformationRejected", "rejection-event-1", "\"expiresAt\":\"mañana\""));
+
+        verify(service).handleAppointmentResult(
+                new AppointmentResultEvent.Rejected("rejection-event-1", "process-a92b47d0", "hold-6c0c2f41", null, null));
+    }
+
+    @Test
+    void un_motivo_demasiado_largo_se_recorta_a_100_caracteres() {
+        when(service.handleAppointmentResult(any())).thenReturn(new AppointmentResultOutcome.Duplicate());
+
+        listener().onMessage(resultado("AdditionalInformationRejected", "rejection-event-1", "\"reason\":\"" + "m".repeat(300) + "\""));
+
+        verify(service).handleAppointmentResult(new AppointmentResultEvent.Rejected("rejection-event-1", "process-a92b47d0",
+                "hold-6c0c2f41", "m".repeat(100), null));
+    }
+
+    @Test
+    void la_expiracion_y_el_proceso_invalido_llegan_a_la_fachada() {
+        when(service.handleAppointmentResult(any())).thenReturn(new AppointmentResultOutcome.Duplicate());
+
+        listener().onMessage(resultado("AppointmentProcessExpired", "process-event-7d12", "\"reason\":\"HOLD_EXPIRED\""));
+        listener().onMessage(resultado("AppointmentProcessInvalid", "process-event-7d13", "\"reason\":\"REQUEST_EVENT_MISMATCH\""));
+
+        verify(service).handleAppointmentResult(new AppointmentResultEvent.Expired("process-event-7d12", "process-a92b47d0", "hold-6c0c2f41"));
+        verify(service).handleAppointmentResult(new AppointmentResultEvent.Invalid("process-event-7d13", "process-a92b47d0", "hold-6c0c2f41"));
+    }
+
+    @Test
+    void cada_desenlace_de_un_resultado_se_registra_sin_fallar() {
+        when(service.handleAppointmentResult(any())).thenReturn(new AppointmentResultOutcome.Applied(ReservationProcess.builder().status(ReservationStatus.EXPIRED).build()),
+                new AppointmentResultOutcome.Duplicate(), new AppointmentResultOutcome.ProcessNotFound(),
+                new AppointmentResultOutcome.HoldMismatch(), new AppointmentResultOutcome.NotApplicable());
+
+        for (int i = 0; i < 5; i++) {
+            listener().onMessage(resultado("AppointmentProcessExpired", "process-event-" + i, "\"reason\":\"HOLD_EXPIRED\""));
+        }
+    }
+
+    @Test
+    void un_resultado_incompleto_se_descarta() {
+        // la confirmación sin reservationId, y cualquier resultado sin eventId, proceso o holdId
+        listener().onMessage(resultado("AppointmentConfirmed", "confirmation-event-1", "\"status\":\"CONFIRMED\""));
+        listener().onMessage(resultado("AppointmentProcessExpired", "process-event-1", "\"reason\":\"HOLD_EXPIRED\"")
+                .replace("\"holdId\":\"hold-6c0c2f41\",", ""));
+        listener().onMessage(resultado("AppointmentProcessExpired", "process-event-1", "\"reason\":\"HOLD_EXPIRED\"")
+                .replace("\"reservationProcessId\":\"process-a92b47d0\"", "\"reservationProcessId\":\" \""));
+        listener().onMessage(resultado("AppointmentProcessExpired", " ", "\"reason\":\"HOLD_EXPIRED\""));
+
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void un_fallo_operativo_al_aplicar_un_resultado_tambien_se_deja_propagar() {
+        when(service.handleAppointmentResult(any())).thenThrow(new IllegalStateException("base caída"));
+
+        assertThatThrownBy(() -> listener().onMessage(resultado("AppointmentProcessExpired", "process-event-1", "\"reason\":\"HOLD_EXPIRED\"")))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    private static String resultado(String tipo, String eventId, String campos) {
+        return """
+                {"eventId":"%s","eventType":"%s","groupId":"proyecto-juan-perez","reservationProcessId":"process-a92b47d0",
+                 "holdId":"hold-6c0c2f41","requestEventId":"request-event-8a31",%s,"occurredAt":"2026-09-10T14:36:01Z","schemaVersion":1}"""
+                .formatted(eventId, tipo, campos);
     }
 
     @Test
