@@ -11,6 +11,8 @@ import com.ndonozo.servicioturnosreservas.reservation.application.exception.Hold
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidPhoneNumberException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidReservationStateException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.ReservationNotFoundException;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.AppointmentResultEvent;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.AppointmentResultOutcome;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationCommand;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.CreateReservationCommand;
@@ -22,6 +24,7 @@ import com.ndonozo.servicioturnosreservas.reservation.domain.model.SubmitPhoneCo
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.SubmitPhoneResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.ConfirmReservationUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.CreateReservationUseCase;
+import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.HandleAppointmentResultUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.HandlePhoneRequestedUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.SubmitPhoneUseCase;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +38,7 @@ public class ReservationService {
     private final ConfirmReservationUseCase confirmReservation;
     private final HandlePhoneRequestedUseCase handlePhoneRequested;
     private final SubmitPhoneUseCase submitPhone;
+    private final HandleAppointmentResultUseCase handleAppointmentResult;
 
     public ReservationProcess createReservation(CreateReservationCommand command) {
         return switch (createReservation.createReservation(command)) {
@@ -90,5 +94,10 @@ public class ReservationService {
     /** Lo llama el listener de Kafka, que no es HTTP: devuelve el resultado para que lo registre en el log. */
     public PhoneRequestResult handlePhoneRequested(PhoneRequestedEvent event) {
         return handlePhoneRequested.handlePhoneRequested(event);
+    }
+
+    /** Lo llama el listener de Kafka con el resultado del proceso; devuelve el resultado para que lo registre en el log. */
+    public AppointmentResultOutcome handleAppointmentResult(AppointmentResultEvent event) {
+        return handleAppointmentResult.handleResult(event);
     }
 }
