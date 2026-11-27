@@ -3,6 +3,7 @@ package com.ndonozo.servicioturnosreservas.reservation.application;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.AgendaIntegrationException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.AgendaUnavailableException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.HoldExpiredException;
+import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidPhoneNumberException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidReservationStateException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidSlotException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.ProfessionalDisabledException;
@@ -18,9 +19,12 @@ import com.ndonozo.servicioturnosreservas.reservation.domain.model.CreateReserva
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.PhoneRequestResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.PhoneRequestedEvent;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ReservationProcess;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.SubmitPhoneCommand;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.SubmitPhoneResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.ConfirmReservationUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.CreateReservationUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.HandlePhoneRequestedUseCase;
+import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.SubmitPhoneUseCase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -40,6 +44,8 @@ class ReservationServiceTest {
     private static final CreateReservationCommand COMANDO =
             new CreateReservationCommand(7, 15, LocalDate.of(2026, 11, 30), LocalTime.of(9, 30));
 
+    private static final SubmitPhoneCommand ENVIAR_TELEFONO = new SubmitPhoneCommand(7, "process-1", "2615551234");
+
     private static final ConfirmReservationCommand CONFIRMAR =
             new ConfirmReservationCommand(7, "process-1", "Juan", "Perez");
 
@@ -52,8 +58,11 @@ class ReservationServiceTest {
     @Mock
     private HandlePhoneRequestedUseCase phoneUseCase;
 
+    @Mock
+    private SubmitPhoneUseCase submitPhoneUseCase;
+
     private ReservationService service() {
-        return new ReservationService(useCase, confirmUseCase, phoneUseCase);
+        return new ReservationService(useCase, confirmUseCase, phoneUseCase, submitPhoneUseCase);
     }
 
     @Test
@@ -108,5 +117,27 @@ class ReservationServiceTest {
         when(phoneUseCase.handlePhoneRequested(evento)).thenReturn(new PhoneRequestResult.Duplicate());
 
         assertThat(service().handlePhoneRequested(evento)).isInstanceOf(PhoneRequestResult.Duplicate.class);
+    }
+
+    @Test
+    void enviar_telefono_devuelve_el_proceso_enviado() {
+        ReservationProcess proceso = ReservationProcess.builder().reservationProcessId("process-1").build();
+        when(submitPhoneUseCase.submitPhone(ENVIAR_TELEFONO)).thenReturn(new SubmitPhoneResult.Submitted(proceso));
+
+        assertThat(service().submitPhone(ENVIAR_TELEFONO)).isSameAs(proceso);
+    }
+
+    @Test
+    void enviar_telefono_traduce_cada_resultado_que_no_es_exito_a_su_excepcion() {
+        when(submitPhoneUseCase.submitPhone(ENVIAR_TELEFONO)).thenReturn(
+                new SubmitPhoneResult.NotFound(), new SubmitPhoneResult.InvalidState(), new SubmitPhoneResult.PhoneNotRequested(),
+                new SubmitPhoneResult.HoldExpired(), new SubmitPhoneResult.InvalidPhone());
+
+        assertThatThrownBy(() -> service().submitPhone(ENVIAR_TELEFONO)).isInstanceOf(ReservationNotFoundException.class);
+        assertThatThrownBy(() -> service().submitPhone(ENVIAR_TELEFONO)).isInstanceOf(InvalidReservationStateException.class);
+        assertThatThrownBy(() -> service().submitPhone(ENVIAR_TELEFONO)).isInstanceOf(InvalidReservationStateException.class)
+                .hasMessageContaining("todavía no pidió");
+        assertThatThrownBy(() -> service().submitPhone(ENVIAR_TELEFONO)).isInstanceOf(HoldExpiredException.class);
+        assertThatThrownBy(() -> service().submitPhone(ENVIAR_TELEFONO)).isInstanceOf(InvalidPhoneNumberException.class);
     }
 }

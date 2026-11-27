@@ -17,6 +17,10 @@ spring:
     consumer:
       group-id: ${CATEDRA_KAFKA_CONSUMER_GROUP}
       auto-offset-reset: earliest
+    producer:
+      properties:
+        # Con el broker caído, send() no se queda esperando el metadata 60 s: falla rápido y el caso de uso responde 503
+        max.block.ms: 5000
 
 springdoc:
   api-docs:
@@ -48,6 +52,8 @@ app:
     jwt: ${CATEDRA_JWT}
     connect-timeout: ${CATEDRA_CONNECT_TIMEOUT:2s}
     read-timeout: ${CATEDRA_READ_TIMEOUT:5s}
+    group-id: ${CATEDRA_GROUP_ID}
     kafka:
       appointment-actions-topic: ${CATEDRA_KAFKA_APPOINTMENT_ACTIONS_TOPIC}
+      appointment-phone-topic: ${CATEDRA_KAFKA_APPOINTMENT_PHONE_TOPIC}
   business-time-zone: ${BUSINESS_TIME_ZONE:America/Argentina/Buenos_Aires}

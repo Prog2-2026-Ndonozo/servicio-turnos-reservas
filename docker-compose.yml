@@ -35,6 +35,8 @@ services:
       CATEDRA_KAFKA: "${CATEDRA_KAFKA:?Falta CATEDRA_KAFKA en el .env (copiá .env.example)}"
       CATEDRA_KAFKA_CONSUMER_GROUP: "${CATEDRA_KAFKA_CONSUMER_GROUP:?Falta CATEDRA_KAFKA_CONSUMER_GROUP en el .env (copiá .env.example)}"
       CATEDRA_KAFKA_APPOINTMENT_ACTIONS_TOPIC: "${CATEDRA_KAFKA_APPOINTMENT_ACTIONS_TOPIC:?Falta CATEDRA_KAFKA_APPOINTMENT_ACTIONS_TOPIC en el .env (copiá .env.example)}"
+      CATEDRA_KAFKA_APPOINTMENT_PHONE_TOPIC: "${CATEDRA_KAFKA_APPOINTMENT_PHONE_TOPIC:?Falta CATEDRA_KAFKA_APPOINTMENT_PHONE_TOPIC en el .env (copiá .env.example)}"
+      CATEDRA_GROUP_ID: "${CATEDRA_GROUP_ID:?Falta CATEDRA_GROUP_ID en el .env (copiá .env.example)}"
       CATALOGO_BASE_URL: http://host.docker.internal:8080
       SERVER_PORT: 8080
       CATALOGO_PRIVATE_KEY_FILE: /run/secrets/turnos-private.pem

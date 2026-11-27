@@ -8,6 +8,7 @@ import com.ndonozo.servicioturnosreservas.reservation.application.exception.Prof
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.SlotAlreadyHeldException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.SlotAlreadyReservedException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.HoldExpiredException;
+import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidPhoneNumberException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidReservationStateException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.ReservationNotFoundException;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationCommand;
@@ -17,9 +18,12 @@ import com.ndonozo.servicioturnosreservas.reservation.domain.model.CreateReserva
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.PhoneRequestResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.PhoneRequestedEvent;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ReservationProcess;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.SubmitPhoneCommand;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.SubmitPhoneResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.ConfirmReservationUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.CreateReservationUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.HandlePhoneRequestedUseCase;
+import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.SubmitPhoneUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +34,7 @@ public class ReservationService {
     private final CreateReservationUseCase createReservation;
     private final ConfirmReservationUseCase confirmReservation;
     private final HandlePhoneRequestedUseCase handlePhoneRequested;
+    private final SubmitPhoneUseCase submitPhone;
 
     public ReservationProcess createReservation(CreateReservationCommand command) {
         return switch (createReservation.createReservation(command)) {
@@ -62,6 +67,23 @@ public class ReservationService {
                     throw new HoldExpiredException("El turno retenido venció: hay que empezar de nuevo");
             case ConfirmReservationResult.SlotAlreadyReserved reserved ->
                     throw new SlotAlreadyReservedException("El turno ya está reservado");
+        };
+    }
+
+    public ReservationProcess submitPhone(SubmitPhoneCommand command) {
+        return switch (submitPhone.submitPhone(command)) {
+            case SubmitPhoneResult.Submitted submitted -> submitted.process();
+            case SubmitPhoneResult.NotFound notFound ->
+                    throw new ReservationNotFoundException("No existe la reserva " + command.reservationProcessId());
+            case SubmitPhoneResult.InvalidState invalidState ->
+                    throw new InvalidReservationStateException("La reserva no está esperando un teléfono");
+            case SubmitPhoneResult.PhoneNotRequested notRequested ->
+                    throw new InvalidReservationStateException(
+                            "La cátedra todavía no pidió el teléfono: intentá de nuevo en unos segundos");
+            case SubmitPhoneResult.HoldExpired expired ->
+                    throw new HoldExpiredException("El turno retenido venció: hay que empezar de nuevo");
+            case SubmitPhoneResult.InvalidPhone invalidPhone ->
+                    throw new InvalidPhoneNumberException("El teléfono no es válido: debe tener entre 7 y 15 dígitos y puede empezar con +");
         };
     }
 
