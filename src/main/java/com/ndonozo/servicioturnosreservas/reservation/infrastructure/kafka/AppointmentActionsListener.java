@@ -1,6 +1,8 @@
 package com.ndonozo.servicioturnosreservas.reservation.infrastructure.kafka;
 
 import com.ndonozo.servicioturnosreservas.reservation.application.service.ReservationService;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.AppointmentResultEvent;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.AppointmentResultOutcome;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.PhoneRequestResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.PhoneRequestedEvent;
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.kafka.dto.AppointmentActionMessage;
@@ -10,6 +12,9 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 
 /**
  * Adaptador de entrada: el topic de acciones trae pedidos y resultados de reserva. El mensaje llega como texto, se
@@ -23,6 +28,11 @@ public class AppointmentActionsListener {
 
     static final String PHONE_REQUESTED = "AdditionalInformationRequested";
     static final String PHONE_NUMBER = "PHONE_NUMBER";
+    static final String CONFIRMED = "AppointmentConfirmed";
+    static final String REJECTED = "AdditionalInformationRejected";
+    static final String EXPIRED = "AppointmentProcessExpired";
+    static final String INVALID = "AppointmentProcessInvalid";
+    private static final int MAX_REASON_LENGTH = 100;
 
     private final JsonMapper jsonMapper;
     private final ReservationService reservationService;
@@ -36,14 +46,20 @@ public class AppointmentActionsListener {
             log.warn("Mensaje del topic de acciones descartado: no es JSON válido");
             return;
         }
-        if (message == null || !PHONE_REQUESTED.equals(message.eventType())) {
-            // Los resultados (confirmación, rechazo, expiración...) se tratan en T9.
-            log.debug("Evento {} ignorado (eventId={})", message == null ? null : message.eventType(),
-                    message == null ? null : message.eventId());
+        if (message == null || message.eventType() == null) {
+            log.debug("Mensaje del topic de acciones ignorado: sin eventType");
             return;
         }
-        if (!PHONE_NUMBER.equals(message.requiredField()) || isBlank(message.eventId())
-                || isBlank(message.reservationProcessId()) || isBlank(message.holdId())) {
+        switch (message.eventType()) {
+            case PHONE_REQUESTED -> onPhoneRequested(message);
+            case CONFIRMED, REJECTED, EXPIRED, INVALID -> onResult(message);
+            // La cancelación (I §15.10) y los tipos desconocidos no cambian el proceso de reserva.
+            default -> log.debug("Evento {} ignorado (eventId={})", message.eventType(), message.eventId());
+        }
+    }
+
+    private void onPhoneRequested(AppointmentActionMessage message) {
+        if (!PHONE_NUMBER.equals(message.requiredField()) || !hasIdentifiers(message)) {
             log.warn("AdditionalInformationRequested descartado: faltan datos o no pide un teléfono (eventId={})", message.eventId());
             return;
         }
@@ -59,6 +75,68 @@ public class AppointmentActionsListener {
                     message.eventId(), message.reservationProcessId());
             case PhoneRequestResult.NotApplicable notApplicable -> log.info("Pedido de teléfono sin efecto: el proceso ya no lo espera (eventId={})",
                     message.eventId());
+        }
+    }
+
+    private void onResult(AppointmentActionMessage message) {
+        AppointmentResultEvent event = toResultEvent(message);
+        if (event == null) {
+            log.warn("{} descartado: faltan datos (eventId={})", message.eventType(), message.eventId());
+            return;
+        }
+        AppointmentResultOutcome outcome = reservationService.handleAppointmentResult(event);
+        switch (outcome) {
+            case AppointmentResultOutcome.Applied applied -> log.info("{} aplicado (eventId={}, reservationProcessId={}, estado={})",
+                    message.eventType(), message.eventId(), message.reservationProcessId(), applied.process().status());
+            case AppointmentResultOutcome.Duplicate duplicate -> log.info("{} repetido, sin efecto (eventId={})",
+                    message.eventType(), message.eventId());
+            case AppointmentResultOutcome.ProcessNotFound notFound -> log.warn("{} de un proceso desconocido (eventId={}, reservationProcessId={})",
+                    message.eventType(), message.eventId(), message.reservationProcessId());
+            case AppointmentResultOutcome.HoldMismatch mismatch -> log.warn("{} con otro holdId (eventId={}, reservationProcessId={})",
+                    message.eventType(), message.eventId(), message.reservationProcessId());
+            case AppointmentResultOutcome.NotApplicable notApplicable -> log.info("{} sin efecto: el proceso no estaba en un estado que lo admita (eventId={})",
+                    message.eventType(), message.eventId());
+        }
+    }
+
+    /** Null si faltan los datos que el resultado necesita (el mensaje se descarta con un WARN). */
+    private static AppointmentResultEvent toResultEvent(AppointmentActionMessage message) {
+        if (!hasIdentifiers(message)) {
+            return null;
+        }
+        String id = message.eventId();
+        String process = message.reservationProcessId();
+        String hold = message.holdId();
+        return switch (message.eventType()) {
+            case CONFIRMED -> message.reservationId() == null ? null
+                    : new AppointmentResultEvent.Confirmed(id, process, hold, message.reservationId());
+            case REJECTED -> new AppointmentResultEvent.Rejected(id, process, hold, abbreviate(message.reason()),
+                    parseInstant(message.expiresAt()));
+            case EXPIRED -> new AppointmentResultEvent.Expired(id, process, hold);
+            case INVALID -> new AppointmentResultEvent.Invalid(id, process, hold);
+            default -> null;
+        };
+    }
+
+    private static boolean hasIdentifiers(AppointmentActionMessage message) {
+        return !isBlank(message.eventId()) && !isBlank(message.reservationProcessId()) && !isBlank(message.holdId());
+    }
+
+    private static String abbreviate(String reason) {
+        if (isBlank(reason)) {
+            return null;
+        }
+        return reason.length() <= MAX_REASON_LENGTH ? reason : reason.substring(0, MAX_REASON_LENGTH);
+    }
+
+    private static Instant parseInstant(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException e) {
+            return null;
         }
     }
 

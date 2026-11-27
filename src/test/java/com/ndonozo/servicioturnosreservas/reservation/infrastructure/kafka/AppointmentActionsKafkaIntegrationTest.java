@@ -142,6 +142,64 @@ class AppointmentActionsKafkaIntegrationTest {
         assertThat(eventId("process-1")).isEqualTo("evt-bueno");
     }
 
+    @Test
+    void la_confirmacion_pasa_el_proceso_a_CONFIRMED_y_guarda_el_reservationId() {
+        proceso("process-1", "hold-1", "PHONE_SUBMITTED");
+
+        publica(resultado("AppointmentConfirmed", "evt-1", "process-1", "hold-1", "\"reservationId\":8251,\"status\":\"CONFIRMED\""));
+        esperaAlMarcador();
+
+        assertThat(estado("process-1")).isEqualTo("CONFIRMED");
+        assertThat(jdbc.queryForObject("SELECT reservation_id FROM reservation_process WHERE reservation_process_id = 'process-1'", Long.class))
+                .isEqualTo(8251L);
+    }
+
+    @Test
+    void el_rechazo_vuelve_a_WAITING_FOR_PHONE_con_el_motivo_y_el_vencimiento_nuevo() {
+        proceso("process-1", "hold-1", "PHONE_SUBMITTED");
+
+        publica(resultado("AdditionalInformationRejected", "evt-1", "process-1", "hold-1",
+                "\"reason\":\"INVALID_PHONE_NUMBER\",\"expiresAt\":\"2027-03-01T10:00:00Z\""));
+        esperaAlMarcador();
+
+        assertThat(estado("process-1")).isEqualTo("WAITING_FOR_PHONE");
+        assertThat(jdbc.queryForObject("SELECT rejection_reason FROM reservation_process WHERE reservation_process_id = 'process-1'", String.class))
+                .isEqualTo("INVALID_PHONE_NUMBER");
+        assertThat(jdbc.queryForObject("SELECT expires_at FROM reservation_process WHERE reservation_process_id = 'process-1'", Timestamp.class)
+                .toInstant()).isEqualTo(Instant.parse("2027-03-01T10:00:00Z"));
+    }
+
+    @Test
+    void la_expiracion_y_el_proceso_invalido_cierran_el_proceso() {
+        proceso("process-1", "hold-1", "PHONE_SUBMITTED");
+        proceso("process-2", "hold-2", "WAITING_FOR_PHONE");
+
+        publica(resultado("AppointmentProcessExpired", "evt-1", "process-1", "hold-1", "\"reason\":\"HOLD_EXPIRED\""));
+        publica(resultado("AppointmentProcessInvalid", "evt-2", "process-2", "hold-2", "\"reason\":\"REQUEST_EVENT_MISMATCH\""));
+        esperaAlMarcador();
+
+        assertThat(estado("process-1")).isEqualTo("EXPIRED");
+        assertThat(estado("process-2")).isEqualTo("FAILED");
+    }
+
+    @Test
+    void un_resultado_repetido_o_tardio_no_cambia_nada() {
+        proceso("process-1", "hold-1", "PHONE_SUBMITTED");
+
+        String confirmacion = resultado("AppointmentConfirmed", "evt-1", "process-1", "hold-1", "\"reservationId\":8251");
+        publica(confirmacion);
+        publica(confirmacion);
+        // llega tarde una expiración y un rechazo: la reserva confirmada no se mueve
+        publica(resultado("AppointmentProcessExpired", "evt-2", "process-1", "hold-1", "\"reason\":\"HOLD_EXPIRED\""));
+        publica(resultado("AdditionalInformationRejected", "evt-3", "process-1", "hold-1", "\"reason\":\"INVALID_PHONE_NUMBER\""));
+        esperaAlMarcador();
+
+        assertThat(estado("process-1")).isEqualTo("CONFIRMED");
+        // una sola escritura: la versión pasó de 0 a 1 y no más
+        assertThat(jdbc.queryForObject("SELECT version FROM reservation_process WHERE reservation_process_id = 'process-1'", Long.class)).isEqualTo(1L);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM processed_event WHERE event_id IN ('evt-1','evt-2','evt-3')", Integer.class)).isEqualTo(3);
+    }
+
     // ---------- ayudas ----------
 
     private void publica(String mensaje) {
@@ -163,6 +221,13 @@ class AppointmentActionsKafkaIntegrationTest {
                  "requiredField":"PHONE_NUMBER","message":"Ingrese un numero de telefono para continuar.",
                  "expiresAt":"2026-09-10T14:44:50Z","occurredAt":"2026-09-10T14:35:10Z","schemaVersion":1}"""
                 .formatted(eventId, process, hold);
+    }
+
+    private static String resultado(String tipo, String eventId, String process, String hold, String campos) {
+        return """
+                {"eventId":"%s","eventType":"%s","groupId":"proyecto-juan-perez","reservationProcessId":"%s","holdId":"%s",
+                 "requestEventId":"request-event-1",%s,"occurredAt":"2026-09-10T14:36:01Z","schemaVersion":1}"""
+                .formatted(eventId, tipo, process, hold, campos);
     }
 
     private void proceso(String processId, String holdId, String estado) {
