@@ -1,5 +1,6 @@
 package com.ndonozo.servicioturnosreservas.reservation.infrastructure.persistence.adapter;
 
+import com.ndonozo.servicioturnosreservas.reservation.domain.exception.ReservationConflictException;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ReservationProcess;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ReservationStatus;
 import com.ndonozo.servicioturnosreservas.reservation.infrastructure.persistence.mapper.ReservationProcessMapper;
@@ -25,13 +26,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Prueba contra un PostgreSQL real: Flyway aplica V1 y V2 y Hibernate corre en ddl-auto=validate, así que también comprueba
+ * Prueba contra un PostgreSQL real: Flyway aplica V1, V2 y V3 y Hibernate corre en ddl-auto=validate, así que también comprueba
  * que la entidad calza con la tabla. Cada test se revierte al terminar.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
-@Import({JpaReservationProcessRepositoryAdapter.class, ReservationProcessMapper.class})
+@Import({JpaReservationProcessRepositoryAdapter.class, ReservationProcessMapper.class, JdbcProcessedEventRepositoryAdapter.class})
 class JpaReservationProcessRepositoryAdapterPostgresTest {
 
     @Container
@@ -43,6 +44,9 @@ class JpaReservationProcessRepositoryAdapterPostgresTest {
 
     @Autowired
     private JpaReservationProcessRepositoryAdapter adapter;
+
+    @Autowired
+    private JdbcProcessedEventRepositoryAdapter processedEvents;
 
     @Autowired
     private EntityManager em;
@@ -154,5 +158,63 @@ class JpaReservationProcessRepositoryAdapterPostgresTest {
                     assertThat(p.createdDate()).isEqualTo(FECHA);
                     assertThat(p.lastModifiedDate()).isEqualTo(FECHA.plusSeconds(30));
                 });
+    }
+
+    @Test
+    void busca_el_proceso_por_su_id_sin_filtrar_por_usuario() {
+        adapter.save(proceso("process-1", "hold-1"));
+        em.clear();
+
+        assertThat(adapter.findByReservationProcessId("process-1")).get().satisfies(p -> assertThat(p.userId()).isEqualTo(userId));
+        assertThat(adapter.findByReservationProcessId("no-existe")).isEmpty();
+    }
+
+    @Test
+    void el_eventId_del_pedido_de_telefono_se_guarda_y_se_lee() {
+        ReservationProcess guardado = adapter.save(proceso("process-1", "hold-1"));
+        assertThat(guardado.phoneRequestEventId()).isNull();
+        em.clear();
+
+        adapter.save(guardado.withPhoneRequestEventId("evt-1", FECHA.plusSeconds(5)));
+        em.clear();
+
+        assertThat(adapter.findByReservationProcessId("process-1")).get()
+                .satisfies(p -> assertThat(p.phoneRequestEventId()).isEqualTo("evt-1"));
+    }
+
+    @Test
+    void cada_guardado_sube_la_version_y_un_guardado_con_una_version_vieja_es_un_choque() {
+        ReservationProcess nuevo = adapter.save(proceso("process-1", "hold-1"));
+        em.clear();
+        assertThat(nuevo.version()).isZero();
+
+        ReservationProcess segundo = adapter.save(nuevo.withPhoneRequestEventId("evt-1", FECHA.plusSeconds(1)));
+        em.clear();
+        assertThat(segundo.version()).isEqualTo(1L);
+
+        // 'nuevo' todavía trae la versión 0: otro escritor ya guardó la 1
+        assertThatThrownBy(() -> adapter.save(nuevo.transitionTo(ReservationStatus.WAITING_FOR_PHONE, FECHA.plusSeconds(2))))
+                .isInstanceOf(ReservationConflictException.class);
+        em.clear();
+        assertThat(adapter.findByReservationProcessId("process-1")).get().satisfies(p -> {
+            assertThat(p.status()).isEqualTo(ReservationStatus.HELD);
+            assertThat(p.phoneRequestEventId()).isEqualTo("evt-1");
+        });
+    }
+
+    @Test
+    void un_evento_se_registra_una_sola_vez() {
+        assertThat(processedEvents.markProcessed("evt-1", FECHA)).isTrue();
+        assertThat(processedEvents.markProcessed("evt-1", FECHA.plusSeconds(9))).isFalse();
+        assertThat(processedEvents.markProcessed("evt-2", FECHA)).isTrue();
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM processed_event", Integer.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT processed_at FROM processed_event WHERE event_id = 'evt-1'",
+                java.sql.Timestamp.class).toInstant()).isEqualTo(FECHA);
+    }
+
+    @Test
+    void la_base_rechaza_un_eventId_vacio() {
+        assertThatThrownBy(() -> processedEvents.markProcessed("  ", FECHA)).isInstanceOf(DataIntegrityViolationException.class);
     }
 }
