@@ -15,9 +15,12 @@ import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReserv
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.CreateReservationCommand;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.CreateReservationResult;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.PhoneRequestResult;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.PhoneRequestedEvent;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ReservationProcess;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.ConfirmReservationUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.CreateReservationUseCase;
+import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.HandlePhoneRequestedUseCase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -46,8 +49,11 @@ class ReservationServiceTest {
     @Mock
     private ConfirmReservationUseCase confirmUseCase;
 
+    @Mock
+    private HandlePhoneRequestedUseCase phoneUseCase;
+
     private ReservationService service() {
-        return new ReservationService(useCase, confirmUseCase);
+        return new ReservationService(useCase, confirmUseCase, phoneUseCase);
     }
 
     @Test
@@ -94,5 +100,13 @@ class ReservationServiceTest {
         assertThatThrownBy(() -> service().confirmReservation(CONFIRMAR)).isInstanceOf(InvalidReservationStateException.class);
         assertThatThrownBy(() -> service().confirmReservation(CONFIRMAR)).isInstanceOf(HoldExpiredException.class);
         assertThatThrownBy(() -> service().confirmReservation(CONFIRMAR)).isInstanceOf(SlotAlreadyReservedException.class);
+    }
+
+    @Test
+    void el_pedido_de_telefono_se_delega_y_su_resultado_se_devuelve_tal_cual() {
+        PhoneRequestedEvent evento = new PhoneRequestedEvent("evt-1", "process-1", "hold-1");
+        when(phoneUseCase.handlePhoneRequested(evento)).thenReturn(new PhoneRequestResult.Duplicate());
+
+        assertThat(service().handlePhoneRequested(evento)).isInstanceOf(PhoneRequestResult.Duplicate.class);
     }
 }

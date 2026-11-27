@@ -14,9 +14,12 @@ import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReserv
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.CreateReservationCommand;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.CreateReservationResult;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.PhoneRequestResult;
+import com.ndonozo.servicioturnosreservas.reservation.domain.model.PhoneRequestedEvent;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ReservationProcess;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.ConfirmReservationUseCase;
 import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.CreateReservationUseCase;
+import com.ndonozo.servicioturnosreservas.reservation.domain.ports.in.HandlePhoneRequestedUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +29,7 @@ public class ReservationService {
 
     private final CreateReservationUseCase createReservation;
     private final ConfirmReservationUseCase confirmReservation;
+    private final HandlePhoneRequestedUseCase handlePhoneRequested;
 
     public ReservationProcess createReservation(CreateReservationCommand command) {
         return switch (createReservation.createReservation(command)) {
@@ -59,5 +63,10 @@ public class ReservationService {
             case ConfirmReservationResult.SlotAlreadyReserved reserved ->
                     throw new SlotAlreadyReservedException("El turno ya está reservado");
         };
+    }
+
+    /** Lo llama el listener de Kafka, que no es HTTP: devuelve el resultado para que lo registre en el log. */
+    public PhoneRequestResult handlePhoneRequested(PhoneRequestedEvent event) {
+        return handlePhoneRequested.handlePhoneRequested(event);
     }
 }
