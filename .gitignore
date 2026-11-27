@@ -36,3 +36,6 @@ cuenta_tecnica.json
 ### Secretos ###
 .env
 *.pem
+
+### Material de defensa (local, no se versiona) ###
+defensa/
