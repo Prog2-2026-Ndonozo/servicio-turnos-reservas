@@ -12,6 +12,7 @@ import com.ndonozo.servicioturnosreservas.reservation.application.exception.Prof
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.ReservationNotFoundException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.SlotAlreadyHeldException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.SlotAlreadyReservedException;
+import com.ndonozo.servicioturnosreservas.reservation.domain.exception.ReservationConflictException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -60,6 +61,12 @@ public class ReservationExceptionHandler {
     @ExceptionHandler(HoldExpiredException.class)
     public ProblemDetail handle(HoldExpiredException e) {
         return problem(HttpStatus.CONFLICT, "HOLD_EXPIRED", e.getMessage());
+    }
+
+    @ExceptionHandler(ReservationConflictException.class)
+    public ProblemDetail handle(ReservationConflictException e) {
+        log.warn("Choque de versión sobre un proceso de reserva: {}", e.getMessage());
+        return problem(HttpStatus.CONFLICT, "CONCURRENT_UPDATE", "La reserva cambió mientras se procesaba. Intentá de nuevo");
     }
 
     @ExceptionHandler(AgendaUnavailableException.class)

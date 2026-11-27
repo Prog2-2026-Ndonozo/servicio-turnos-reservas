@@ -32,6 +32,9 @@ services:
       JWT_SECRET: "${JWT_SECRET:?Falta JWT_SECRET en el .env (copiá .env.example)}"
       CATEDRA_BASE_URL: "${CATEDRA_BASE_URL:?Falta CATEDRA_BASE_URL en el .env (copiá .env.example)}"
       CATEDRA_JWT: "${CATEDRA_JWT:?Falta CATEDRA_JWT en el .env (copiá .env.example)}"
+      CATEDRA_KAFKA: "${CATEDRA_KAFKA:?Falta CATEDRA_KAFKA en el .env (copiá .env.example)}"
+      CATEDRA_KAFKA_CONSUMER_GROUP: "${CATEDRA_KAFKA_CONSUMER_GROUP:?Falta CATEDRA_KAFKA_CONSUMER_GROUP en el .env (copiá .env.example)}"
+      CATEDRA_KAFKA_APPOINTMENT_ACTIONS_TOPIC: "${CATEDRA_KAFKA_APPOINTMENT_ACTIONS_TOPIC:?Falta CATEDRA_KAFKA_APPOINTMENT_ACTIONS_TOPIC en el .env (copiá .env.example)}"
       CATALOGO_BASE_URL: http://host.docker.internal:8080
       SERVER_PORT: 8080
       CATALOGO_PRIVATE_KEY_FILE: /run/secrets/turnos-private.pem

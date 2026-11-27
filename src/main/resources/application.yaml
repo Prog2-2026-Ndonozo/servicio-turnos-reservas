@@ -12,6 +12,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+  kafka:
+    bootstrap-servers: ${CATEDRA_KAFKA}
+    consumer:
+      group-id: ${CATEDRA_KAFKA_CONSUMER_GROUP}
+      auto-offset-reset: earliest
 
 springdoc:
   api-docs:
@@ -43,4 +48,6 @@ app:
     jwt: ${CATEDRA_JWT}
     connect-timeout: ${CATEDRA_CONNECT_TIMEOUT:2s}
     read-timeout: ${CATEDRA_READ_TIMEOUT:5s}
+    kafka:
+      appointment-actions-topic: ${CATEDRA_KAFKA_APPOINTMENT_ACTIONS_TOPIC}
   business-time-zone: ${BUSINESS_TIME_ZONE:America/Argentina/Buenos_Aires}

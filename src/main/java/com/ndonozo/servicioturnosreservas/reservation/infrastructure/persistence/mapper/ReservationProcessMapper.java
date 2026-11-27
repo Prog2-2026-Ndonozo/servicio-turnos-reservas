@@ -21,6 +21,8 @@ public class ReservationProcessMapper {
                 .expiresAt(entity.getExpiresAt())
                 .createdDate(entity.getCreatedDate())
                 .lastModifiedDate(entity.getLastModifiedDate())
+                .phoneRequestEventId(entity.getPhoneRequestEventId())
+                .version(entity.getVersion())
                 .build();
     }
 
@@ -38,6 +40,8 @@ public class ReservationProcessMapper {
         entity.setExpiresAt(process.expiresAt());
         entity.setCreatedDate(process.createdDate());
         entity.setLastModifiedDate(process.lastModifiedDate());
+        entity.setPhoneRequestEventId(process.phoneRequestEventId());
+        entity.setVersion(process.version());
         return entity;
     }
 }

@@ -2,6 +2,7 @@ package com.ndonozo.servicioturnosreservas.reservation.application;
 
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.CatedraUnavailableException;
 import com.ndonozo.servicioturnosreservas.reservation.application.usecases.ConfirmReservationUseCaseImpl;
+import com.ndonozo.servicioturnosreservas.reservation.domain.exception.ReservationConflictException;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmHoldResult;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationCommand;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationResult;
@@ -160,5 +161,28 @@ class ConfirmReservationUseCaseImplTest {
         assertThatThrownBy(() -> useCase().confirmReservation(COMANDO)).isInstanceOf(CatedraUnavailableException.class);
 
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void si_el_evento_de_kafka_llego_primero_devuelve_lo_que_guardo_sin_pisarlo() {
+        ReservationProcess leido = proceso(ReservationStatus.HELD, VENCE);
+        ReservationProcess yaMovido = proceso(ReservationStatus.WAITING_FOR_PHONE, VENCE).toBuilder()
+                .phoneRequestEventId("evt-1").build();
+        when(repository.findByReservationProcessIdAndUserId("process-1", 7))
+                .thenReturn(Optional.of(leido), Optional.of(yaMovido));
+        when(holdPort.confirmHold("hold-1", "user-7", "Juan", "Perez")).thenReturn(new ConfirmHoldResult.Confirmed());
+        when(repository.save(any(ReservationProcess.class))).thenThrow(new ReservationConflictException("choque", null));
+
+        assertThat(useCase().confirmReservation(COMANDO)).isEqualTo(new ConfirmReservationResult.Confirmed(yaMovido));
+    }
+
+    @Test
+    void si_el_choque_no_es_por_el_evento_la_excepcion_sale() {
+        when(repository.findByReservationProcessIdAndUserId("process-1", 7))
+                .thenReturn(Optional.of(proceso(ReservationStatus.HELD, VENCE)));
+        when(holdPort.confirmHold("hold-1", "user-7", "Juan", "Perez")).thenReturn(new ConfirmHoldResult.Confirmed());
+        when(repository.save(any(ReservationProcess.class))).thenThrow(new ReservationConflictException("choque", null));
+
+        assertThatThrownBy(() -> useCase().confirmReservation(COMANDO)).isInstanceOf(ReservationConflictException.class);
     }
 }

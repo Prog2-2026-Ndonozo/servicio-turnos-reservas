@@ -10,6 +10,7 @@ import com.ndonozo.servicioturnosreservas.reservation.application.exception.Inva
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.ReservationNotFoundException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.SlotAlreadyReservedException;
 import com.ndonozo.servicioturnosreservas.reservation.application.service.ReservationService;
+import com.ndonozo.servicioturnosreservas.reservation.domain.exception.ReservationConflictException;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ConfirmReservationCommand;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ReservationProcess;
 import com.ndonozo.servicioturnosreservas.reservation.domain.model.ReservationStatus;
@@ -123,6 +124,7 @@ class ReservationConfirmControllerTest {
         verificaError(new InvalidReservationStateException("estado"), 409, "INVALID_RESERVATION_STATE");
         verificaError(new HoldExpiredException("venció"), 409, "HOLD_EXPIRED");
         verificaError(new SlotAlreadyReservedException("reservado"), 409, "SLOT_ALREADY_RESERVED");
+        verificaError(new ReservationConflictException("choque", null), 409, "CONCURRENT_UPDATE");
     }
 
     @Test

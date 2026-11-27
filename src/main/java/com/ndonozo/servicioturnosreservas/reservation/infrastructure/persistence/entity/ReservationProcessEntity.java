@@ -40,4 +40,10 @@ public class ReservationProcessEntity {
     private Instant expiresAt;
     private Instant createdDate;
     private Instant lastModifiedDate;
+
+    private String phoneRequestEventId;
+
+    // Bloqueo optimista: dos escritores del mismo proceso no se pisan (ADR-0010).
+    @Version
+    private Long version;
 }
