@@ -5,6 +5,7 @@ import com.ndonozo.servicioturnosreservas.reservation.application.exception.Agen
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.CatedraIntegrationException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.CatedraUnavailableException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.HoldExpiredException;
+import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidPhoneNumberException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidReservationStateException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.InvalidSlotException;
 import com.ndonozo.servicioturnosreservas.reservation.application.exception.ProfessionalDisabledException;
@@ -31,6 +32,11 @@ public class ReservationExceptionHandler {
     @ExceptionHandler(ProfessionalDisabledException.class)
     public ProblemDetail handle(ProfessionalDisabledException e) {
         return problem(HttpStatus.BAD_REQUEST, "PROFESSIONAL_DISABLED", e.getMessage());
+    }
+
+    @ExceptionHandler(InvalidPhoneNumberException.class)
+    public ProblemDetail handle(InvalidPhoneNumberException e) {
+        return problem(HttpStatus.BAD_REQUEST, "INVALID_PHONE_NUMBER", e.getMessage());
     }
 
     @ExceptionHandler(ProfessionalNotFoundException.class)
