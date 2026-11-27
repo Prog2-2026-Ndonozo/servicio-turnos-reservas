@@ -43,6 +43,10 @@ public class ReservationProcessEntity {
 
     private String phoneRequestEventId;
 
+    // Identificador de la reserva confirmada en la cátedra (I §15.6) y motivo del último rechazo del teléfono (I §15.7)
+    private Long reservationId;
+    private String rejectionReason;
+
     // Bloqueo optimista: dos escritores del mismo proceso no se pisan (ADR-0010).
     @Version
     private Long version;
